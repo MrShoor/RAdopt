@@ -1,0 +1,9 @@
+#pragma once
+#define NOMINMAX
+#define GLM_FORCE_XYZW_ONLY
+#define GLM_FORCE_SWIZZLE
+#include <glm/glm.hpp>
+#include <glm/ext.hpp>
+#include <glm/gtx/string_cast.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include "GLMUtils.h"
