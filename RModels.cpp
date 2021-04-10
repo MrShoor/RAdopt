@@ -397,7 +397,7 @@ namespace RA {
             }
         }
         else {
-            parent_abs = m_arm->transform;// glm::mat4(1.0);
+            parent_abs = m_pose_transform * m_arm->transform;// glm::mat4(1.0);
         }
         m_abs_pose[idx] = parent_abs * m_local_pose[idx];
     }
@@ -409,11 +409,11 @@ namespace RA {
     }
     glm::mat4 ArmaturePose::GetTransform()
     {
-        return m_arm->transform;
+        return m_pose_transform;
     }
     void ArmaturePose::SetTransform(const glm::mat4 m)
     {
-        m_arm->transform = m;
+        m_pose_transform = m;
         UpdateAbsTransform();
     }
     Armature* ArmaturePose::Armature()
@@ -461,6 +461,7 @@ namespace RA {
         m_anim_pose = pose.m_anim_pose;
         m_local_pose = pose.m_local_pose;
         m_abs_pose = pose.m_abs_pose;
+        m_pose_transform = pose.m_pose_transform;
     }
     ArmaturePose::ArmaturePose(const ArmaturePtr& armature)
     {
@@ -470,6 +471,7 @@ namespace RA {
         for (glm::mat4& m : m_local_pose) m = glm::mat4(1.0);
         m_abs_pose.resize(m_arm->bones.size());
         for (glm::mat4& m : m_abs_pose) m = m_arm->transform;
+        m_pose_transform = glm::mat4(1);
     }
     void AnimController::SetSingleAnimationWithDuration(int anim_idx, AnimDirection direction, uint64_t duration, uint64_t fade_in_selected, uint64_t fade_out_rest)
     {
@@ -498,6 +500,10 @@ namespace RA {
         float fade_in_w = (fade_in >= 1.0f) ? (1.0f / fade_in) : 1.0f;
         for (int i = 0; i < int(m_state.size()); i++) {
             if (m_state[i].anim_idx == anim_idx) {
+                if (!IsLooped(direction)) {
+                    m_state[i].frame = 0;
+                    m_times[i].start = m_current_time;
+                }
                 m_times[i].direction = direction;
                 m_times[i].speed_factor = speed_factor;
                 m_times[i].fade_in_w = fade_in_w;
@@ -532,11 +538,11 @@ namespace RA {
             }
         }
     }
-    bool AnimController::IsLooped(AnimDirection direction)
+    bool AnimController::IsLooped(AnimDirection direction) const
     {
         return (direction == AnimDirection::BackwardLoop) || (direction == AnimDirection::ForwardLoop);
     }
-    uint64_t AnimController::GetAnimationDuration(int anim_idx, bool looped)
+    uint64_t AnimController::GetAnimationDuration(int anim_idx, bool looped) const
     {
         int num_frames = m_pose->Armature()->anims[anim_idx]->frame_end - m_pose->Armature()->anims[anim_idx]->frame_start;
         if (!looped) num_frames--;
@@ -551,7 +557,7 @@ namespace RA {
     {
         m_pose = pose;
     }
-    const std::vector<AnimState>& AnimController::State()
+    const std::vector<AnimState>& AnimController::State() const
     {
         if (m_state.size()) {
             return m_state;            
@@ -560,7 +566,7 @@ namespace RA {
             return m_last_frame_state;
         }
     }
-    bool AnimController::IsInState(const char* anim_name)
+    bool AnimController::IsInState(const char* anim_name) const
     {
         if (!m_pose) return false;
         int anim_idx = m_pose->Armature()->FindAnimIdx(anim_name);
@@ -574,6 +580,13 @@ namespace RA {
             }
         }
         return false;
+    }
+    uint64_t AnimController::GetAnimationDuration(const char* anim_name, bool looped) const
+    {
+        if (!m_pose) return 0;
+        int anim_idx = m_pose->Armature()->FindAnimIdx(anim_name);
+        if (anim_idx < 0) return 0;
+        return GetAnimationDuration(anim_idx, looped);
     }
     void AnimController::Start(const char* anim_name, AnimDirection direction, uint64_t fade_in)
     {

@@ -102,35 +102,6 @@ namespace RA {
         }
     }
 
-    int PixelsSize(TextureFmt fmt)
-    {
-        switch (fmt) {
-        case TextureFmt::R8: return 1;
-        case TextureFmt::RG8: return 2;
-        case TextureFmt::RGBA8: return 4;
-        case TextureFmt::R16: return 2;
-        case TextureFmt::RG16: return 4;
-        case TextureFmt::RGBA16: return 8;
-        case TextureFmt::R16f: return 2;
-        case TextureFmt::RG16f: return 4;
-        case TextureFmt::RGBA16f: return 8;
-        case TextureFmt::R32: return 4;
-        case TextureFmt::RG32: return 8;
-        case TextureFmt::RGB32: return 12;
-        case TextureFmt::RGBA32: return 16;
-        case TextureFmt::R32f: return 4;
-        case TextureFmt::RG32f: return 8;
-        case TextureFmt::RGB32f: return 12;
-        case TextureFmt::RGBA32f: return 16;
-        case TextureFmt::D16: return 2;
-        case TextureFmt::D24_S8: return 4;
-        case TextureFmt::D32f: return 4;
-        case TextureFmt::D32f_S8: return 8;
-        default:
-            return 0;
-        }
-    }
-
     bool CanBeShaderRes(TextureFmt fmt) {
         return fmt != TextureFmt::D24_S8;
     }

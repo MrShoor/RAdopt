@@ -90,6 +90,8 @@ namespace RA {
         std::vector<glm::mat4> m_local_pose;
         std::vector<glm::mat4> m_abs_pose;
 
+        glm::mat4 m_pose_transform;
+
         void UpdateAbsTransform(int idx);
         void UpdateAbsTransform();
     public:
@@ -132,20 +134,22 @@ namespace RA {
         void Start(int anim_idx, AnimDirection direction, uint64_t anim_duration, uint64_t fade_in);
         void Stop(int anim_idx, uint64_t fade_out);
 
-        bool IsLooped(AnimDirection direction);
-        uint64_t GetAnimationDuration(int anim_idx, bool looped);
+        uint64_t GetAnimationDuration(int anim_idx, bool looped) const;
+        bool IsLooped(AnimDirection direction) const;
     public:
         ArmaturePosePtr GetPose();
         void SetPose(const ArmaturePosePtr& pose);
 
-        const std::vector<AnimState>& State();
+        const std::vector<AnimState>& State() const;
 
-        bool IsInState(const char* anim_name);
+        bool IsInState(const char* anim_name) const;
+
+        uint64_t GetAnimationDuration(const char* anim_name, bool looped) const;
 
         void Start(const char* anim_name, AnimDirection direction, uint64_t fade_in);
         void Stop (const char* anim_name, uint64_t fade_out);
-        void SetSingleAnimation(const char* anim_name, AnimDirection direction, uint64_t fade_in_selected = 100, uint64_t fade_out_rest = 100);
-        void SetSingleAnimationWithDuration(const char* anim_name, AnimDirection direction, uint64_t anim_duration, uint64_t fade_in_selected = 100, uint64_t fade_out_rest = 100);
+        void SetSingleAnimation(const char* anim_name, AnimDirection direction, uint64_t fade_in_selected = 300, uint64_t fade_out_rest = 300);
+        void SetSingleAnimationWithDuration(const char* anim_name, AnimDirection direction, uint64_t anim_duration, uint64_t fade_in_selected = 300, uint64_t fade_out_rest = 300);
         void SetTime(uint64_t time);
     };
 

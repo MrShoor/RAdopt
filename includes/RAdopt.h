@@ -57,6 +57,12 @@ namespace RA {
             return MurmurHash2(this, sizeof(Sampler));
         }
     };
+    const static Sampler cSampler_Linear { 
+        TexFilter::linear , TexFilter::linear , 16 , 
+        TexWrap::repeat, TexWrap::repeat, TexWrap::repeat, 
+        {0,0,0,0},
+        Compare::never
+    };
 
     struct DrawIndexedCmd {
         UINT IndexCount;
@@ -173,6 +179,7 @@ namespace RA {
     public:
         HWND Window() const;
         FrameBufferPtr SetFrameBuffer(const FrameBufferPtr& fbo);
+        glm::ivec2 CurrentFrameBufferSize() const;
 
         States* States();
 
@@ -225,6 +232,8 @@ namespace RA {
     public:
         TextureFmt Format() const;
         glm::ivec2 Size() const;
+        int SlicesCount() const;
+        int MipsCount() const;
         void SetState(TextureFmt fmt);
         void SetState(TextureFmt fmt, glm::ivec2 size, int mip_levels = 0, int slices = 1, const void* data = nullptr);
         void SetSubData(const glm::ivec2& offset, const glm::ivec2& size, int slice, int mip, const void* data);
@@ -288,6 +297,7 @@ namespace RA {
         ComPtr<ID3D11RenderTargetView> m_color_views[D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT];
         ComPtr<ID3D11DepthStencilView> m_depth_view;
 
+        glm::ivec2 m_size;
         bool m_colors_to_bind_dirty;
         int m_rtv_count;
         std::vector<ID3D11RenderTargetView*> m_colors_to_bind;
@@ -298,6 +308,7 @@ namespace RA {
     public:
         void SetSizeFromWindow(bool update_viewport = true);
         void SetSize(const glm::ivec2& xy, bool update_viewport = true);
+        glm::ivec2 GetSize() const;
 
         void Clear(int slot, const glm::vec4& color);
         void ClearDS(float depth, bool clear_depth = true, char stencil = 0, bool clear_stencil = false);
@@ -454,6 +465,8 @@ namespace RA {
         VertexBufferPtr m_selected_instances;
         int m_selected_insatnce_steprate;
 
+        ID3D11UnorderedAccessView* m_views_uav[D3D11_PS_CS_UAV_REGISTER_COUNT];
+
         void AutoReflect(const void* data, int data_size, ShaderType st);
         void Load(std::istream& stream);
         void SelectTopology(PrimTopology pt);
@@ -482,9 +495,11 @@ namespace RA {
         void DrawIndexed(PrimTopology pt, const std::vector<DrawIndexedCmd>& cmd_buf);
         void DrawIndexed(PrimTopology pt, int index_start = 0, int index_count = -1, int instance_count = -1, int base_vertex = 0, int base_instance = 0);
         void Draw(PrimTopology pt, int vert_start = 0, int vert_count = -1, int instance_count = -1, int base_instance = 0);
-
+        
         void CS_SetUAV(int slot, const Texture2DPtr& tex, int mip, int slice_start, int slice_count);
         void CS_SetUAV(int slot, const StructuredBufferPtr& buf, int initial_counter = -1);
+        void CS_ClearUAV(int slot, uint32_t v);
+        void CS_ClearUAV(int slot, glm::vec4 v);
         void Dispatch(glm::ivec3 groups);
 
         Program(const DevicePtr& device);
@@ -506,4 +521,6 @@ namespace RA {
         virtual FrameBufferPtr Finish() = 0;
     };
     FrameBufferBuilderIntf* FBB(const DevicePtr& dev);
+
+    int PixelsSize(TextureFmt fmt);
 }

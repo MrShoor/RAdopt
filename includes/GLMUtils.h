@@ -1,6 +1,7 @@
 #pragma once
 #include "GLM.h"
 #include <limits>
+#include <functional>
 
 namespace glm {
     struct AABB {
@@ -107,5 +108,42 @@ namespace glm {
         mat3 m_inv = inverse(m);
         *intpt = b * m_inv;
         return true;
+    }
+
+    struct Bezier2_2d {
+        vec2 pt[3];
+        inline void Split(float k, Bezier2_2d* b1, Bezier2_2d* b2) const {
+            b1->pt[0] = pt[0];
+            b1->pt[1] = mix(pt[0], pt[1], k);
+
+            b2->pt[2] = pt[2];
+            b2->pt[1] = mix(pt[1], pt[2], k);
+
+            b1->pt[2] = mix(b1->pt[1], b2->pt[1], k);
+            b2->pt[0] = b1->pt[2];
+        }
+        inline bool IsStraight(float tolerance) const {
+            vec2 main_dir = pt[2] - pt[0];
+            vec2 cdir1 = pt[1] - pt[0];
+            vec2 cdir2 = pt[2] - pt[1];
+            float tol_sqr = tolerance * tolerance;
+            if (dot(cdir1, main_dir) <= 0) {
+                if (dot(cdir1, cdir1) > tol_sqr) return false;
+            }
+            if (dot(cdir2, main_dir) <= 0) {
+                if (dot(cdir2, cdir2) > tol_sqr) return false;
+            }
+            float main_dir_lensqr = dot(main_dir, main_dir);
+            float s = cdir1.x * main_dir.y - cdir1.y * main_dir.x;
+            s = s * s;
+            if (s > tol_sqr * main_dir_lensqr) return false;
+            return true;
+        }
+        void Aprrox(float tolerance, const std::function<void(const glm::vec2& v)>& add_point) const;
+    };
+
+    inline float NormalizeAngle(float v) {
+        float pi2 = glm::pi<float>() * 2;
+        return fract(v / pi2) * pi2;
     }
 }

@@ -39,6 +39,35 @@ namespace RA {
         return h;
     }
 
+    int PixelsSize(TextureFmt fmt)
+    {
+        switch (fmt) {
+        case TextureFmt::R8: return 1;
+        case TextureFmt::RG8: return 2;
+        case TextureFmt::RGBA8: return 4;
+        case TextureFmt::R16: return 2;
+        case TextureFmt::RG16: return 4;
+        case TextureFmt::RGBA16: return 8;
+        case TextureFmt::R16f: return 2;
+        case TextureFmt::RG16f: return 4;
+        case TextureFmt::RGBA16f: return 8;
+        case TextureFmt::R32: return 4;
+        case TextureFmt::RG32: return 8;
+        case TextureFmt::RGB32: return 12;
+        case TextureFmt::RGBA32: return 16;
+        case TextureFmt::R32f: return 4;
+        case TextureFmt::RG32f: return 8;
+        case TextureFmt::RGB32f: return 12;
+        case TextureFmt::RGBA32f: return 16;
+        case TextureFmt::D16: return 2;
+        case TextureFmt::D24_S8: return 4;
+        case TextureFmt::D32f: return 4;
+        case TextureFmt::D32f_S8: return 8;
+        default:
+            return 0;
+        }
+    }
+
     class LayoutBuilder : public LayoutBuilderIntf {
     private:
         struct hash_fn {
@@ -477,7 +506,7 @@ namespace RA {
             nullptr,
             D3D_DRIVER_TYPE_HARDWARE,
             0,
-            D3D11_CREATE_DEVICE_SINGLETHREADED,// | D3D11_CREATE_DEVICE_DEBUG,
+            D3D11_CREATE_DEVICE_SINGLETHREADED, //| D3D11_CREATE_DEVICE_DEBUG,
             nullptr,
             0,
             D3D11_SDK_VERSION,
@@ -521,6 +550,17 @@ namespace RA {
             }
         }
         return prev_fbo;
+    }
+    glm::ivec2 Device::CurrentFrameBufferSize() const
+    {
+        if (m_active_fbo_ptr) {
+            return m_active_fbo_ptr->GetSize();
+        }
+        else {
+            RECT rct;
+            GetClientRect(m_wnd, &rct);
+            return glm::ivec2(rct.right - rct.left, rct.bottom - rct.top);
+        }
     }
     States* Device::States()
     {
@@ -689,6 +729,14 @@ namespace RA {
     glm::ivec2 Texture2D::Size() const
     {
         return m_size;
+    }
+    int Texture2D::SlicesCount() const
+    {
+        return m_slices;
+    }
+    int Texture2D::MipsCount() const
+    {
+        return m_mips_count;
     }
     void Texture2D::SetState(TextureFmt fmt)
     {
@@ -1221,14 +1269,25 @@ namespace RA {
     void Program::CS_SetUAV(int slot, const Texture2DPtr& tex, int mip, int slice_start, int slice_count)
     {
         ID3D11UnorderedAccessView* view = tex ? tex->GetUnorderedAccessView(mip, slice_start, slice_count).Get() : nullptr;
+        m_views_uav[slot] = view;
         UINT counter = -1;
         m_device->m_deviceContext->CSSetUnorderedAccessViews(slot, 1, &view, &counter);
     }
     void Program::CS_SetUAV(int slot, const StructuredBufferPtr& buf, int initial_counter)
     {
         ID3D11UnorderedAccessView* view = buf ? buf->GetUnorderedAccessView().Get() : nullptr;
+        m_views_uav[slot] = view;
         UINT counter = initial_counter;
         m_device->m_deviceContext->CSSetUnorderedAccessViews(slot, 1, &view, &counter);
+    }
+    void Program::CS_ClearUAV(int slot, uint32_t v)
+    {       
+        UINT iv[4] = { v,v,v,v };
+        m_device->m_deviceContext->ClearUnorderedAccessViewUint(m_views_uav[slot], iv);
+    }
+    void Program::CS_ClearUAV(int slot, glm::vec4 v)
+    {
+        m_device->m_deviceContext->ClearUnorderedAccessViewFloat(m_views_uav[slot], (float*)&v);
     }
     void Program::Dispatch(glm::ivec3 groups)
     {
@@ -1304,7 +1363,7 @@ namespace RA {
             desc.Format = DXGI_FORMAT_UNKNOWN;
             desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
             desc.Buffer.FirstElement = 0;
-            desc.Buffer.NumElements = m_vert_count;
+            desc.Buffer.NumElements = glm::max(m_vert_count, 1);
             CheckD3DErr( m_device->m_device->CreateShaderResourceView(m_handle.Get(), &desc, &m_srv) );
         }
         return m_srv;
@@ -1343,7 +1402,7 @@ namespace RA {
         m_UAV_with_counter = UAV_with_counter;
 
         D3D11_BUFFER_DESC desc;
-        desc.ByteWidth = vertex_count * m_stride;
+        desc.ByteWidth = glm::max(vertex_count, 1) * m_stride;
         desc.Usage = D3D11_USAGE_DEFAULT;
         desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
         if (UAV) desc.BindFlags |= D3D11_BIND_UNORDERED_ACCESS;
@@ -1737,6 +1796,7 @@ namespace RA {
     }
     void FrameBuffer::SetSize(const glm::ivec2& xy, bool update_viewport)
     {
+        m_size = xy;
         for (int i = 0; i < D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT; i++) {
             if (!m_tex[i]) continue;
             if (m_tex[i]->Size() != xy) {
@@ -1761,6 +1821,10 @@ namespace RA {
             vp.MaxDepth = 1.0;
             m_device->m_deviceContext->RSSetViewports(1, &vp);
         }
+    }
+    glm::ivec2 FrameBuffer::GetSize() const
+    {
+        return m_size;
     }
     void FrameBuffer::Clear(int slot, const glm::vec4& color)
     {
