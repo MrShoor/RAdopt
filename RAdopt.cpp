@@ -477,7 +477,17 @@ namespace RA {
         ID3D11RenderTargetView* tmp = m_RTView.Get();
         m_deviceContext->OMSetRenderTargetsAndUnorderedAccessViews(1, &tmp, nullptr, 0, 0, nullptr, nullptr);
     }
-
+    void Device::SetViewport(const glm::vec2& size)
+    {
+        D3D11_VIEWPORT vp;
+        vp.TopLeftX = 0;
+        vp.TopLeftY = 0;
+        vp.Width = size.x;
+        vp.Height = size.y;
+        vp.MinDepth = 0.0;
+        vp.MaxDepth = 1.0;
+        m_deviceContext->RSSetViewports(1, &vp);
+    }
     Device::Device(HWND wnd)
     {
         m_active_program = nullptr;
@@ -526,7 +536,7 @@ namespace RA {
     {
         return m_wnd;
     }
-    FrameBufferPtr Device::SetFrameBuffer(const FrameBufferPtr& fbo)
+    FrameBufferPtr Device::SetFrameBuffer(const FrameBufferPtr& fbo, bool update_viewport)
     {
         FrameBufferPtr prev_fbo = m_active_fbo.lock();
         std::weak_ptr<FrameBuffer> m_new_fbo = fbo;
@@ -549,6 +559,10 @@ namespace RA {
                 SetDefaultFBO();
             }
         }
+        if (update_viewport) {
+            SetViewport(CurrentFrameBufferSize());
+        }
+
         return prev_fbo;
     }
     glm::ivec2 Device::CurrentFrameBufferSize() const
@@ -663,6 +677,7 @@ namespace RA {
     }
     ComPtr<ID3D11ShaderResourceView> Texture2D::GetShaderResourceView(bool as_array, bool as_cubemap)
     {
+        as_array = as_array || (m_slices > 1);
         int srv_idx = (as_array ? 1 : 0) | (as_cubemap ? 2 : 0);
         if (!m_srv[srv_idx]) {
             D3D11_SHADER_RESOURCE_VIEW_DESC desc;
@@ -1788,13 +1803,13 @@ namespace RA {
 
         if (m_depth && (!m_depth_view)) m_depth_view = m_depth->BuildDepthStencilView(m_depth_params.mip, m_depth_params.slice_start, m_depth_params.slice_count);
     }
-    void FrameBuffer::SetSizeFromWindow(bool update_viewport)
+    void FrameBuffer::SetSizeFromWindow()
     {
         RECT rct;
         GetClientRect(m_device->m_wnd, &rct);
-        SetSize(glm::ivec2(rct.right - rct.left, rct.bottom - rct.top), update_viewport);
+        SetSize(glm::ivec2(rct.right - rct.left, rct.bottom - rct.top));
     }
-    void FrameBuffer::SetSize(const glm::ivec2& xy, bool update_viewport)
+    void FrameBuffer::SetSize(const glm::ivec2& xy)
     {
         m_size = xy;
         for (int i = 0; i < D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT; i++) {
@@ -1810,16 +1825,6 @@ namespace RA {
                 m_depth->SetState(m_depth->Format(), xy, 1, 1);
                 m_depth_view = nullptr;
             }
-        }
-        if (update_viewport) {
-            D3D11_VIEWPORT vp;
-            vp.TopLeftX = 0;
-            vp.TopLeftY = 0;
-            vp.Width = static_cast<float>(xy.x);
-            vp.Height = static_cast<float>(xy.y);
-            vp.MinDepth = 0.0;
-            vp.MaxDepth = 1.0;
-            m_device->m_deviceContext->RSSetViewports(1, &vp);
         }
     }
     glm::ivec2 FrameBuffer::GetSize() const

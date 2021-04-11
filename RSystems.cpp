@@ -284,6 +284,12 @@ namespace RA {
         new_vert.bone_remap_offset = m_remap_range->OffsetSize().x;
         m_sys->m_inst_vbuf->SetSubData(m_idx, 1, &new_vert);
     }
+    const MeshPtr& MCMeshInstance::MeshData() const {
+        return m_mesh->MeshData();
+    }
+    const MeshInstancePtr& MCMeshInstance::InstanceData() const {
+        return m_inst;
+    }
     glm::AABB MCMeshInstance::BBox() const {
         return m_inst->BBox();
     }
@@ -338,6 +344,10 @@ namespace RA {
                 m_sys->m_instances[m_idx]->UpdateInstanceVertex();
             }
         }
+    }
+    const MeshPtr& MCMesh::MeshData() const
+    {
+        return m_mesh;
     }
     std::shared_ptr<MCMesh> MCMesh::SPtr()
     {

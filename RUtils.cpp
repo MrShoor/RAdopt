@@ -5,7 +5,7 @@
 #include <unordered_set>
 
 namespace RA {
-    glm::Plane Camera::GetFrustumPlane(FrustumPlane fp)
+    glm::Plane Camera::GetFrustumPlane(FrustumPlane fp) const
     {
         glm::vec4 pt[3];
         switch (fp) {
@@ -46,6 +46,26 @@ namespace RA {
         }
         return glm::Plane(pt[0].xyz(), pt[1].xyz(), pt[2].xyz());
     }
+    bool Camera::IsOrtho() const
+    {
+        return m_is_ortho;
+    }
+    glm::mat4 Camera::View() const
+    {
+        return m_buf.view;
+    }
+    glm::mat4 Camera::ViewProj() const
+    {
+        return m_buf.view_proj;
+    }
+    glm::mat4 Camera::ViewInv() const
+    {
+        return m_buf.view_inv;
+    }
+    glm::mat4 Camera::ViewProjInv() const
+    {
+        return m_buf.view_proj_inv;
+    }
     Camera::Camera(const DevicePtr& device)
     {
         m_ubo = device->Create_UniformBuffer();
@@ -67,6 +87,7 @@ namespace RA {
     }
     void Camera::SetProjection(float fov, float aspect, const glm::vec2& near_far, const glm::vec2& depth_range)
     {
+        m_is_ortho = false;
         m_fov = fov;
         m_aspect = aspect;
         m_near_far = near_far;
@@ -83,6 +104,27 @@ namespace RA {
         m_buf.proj[2][2] = m_depth_range.x - depth_size * m_near_far.y * q;
         m_buf.proj[2][3] = 1.0;
         m_buf.proj[3][2] = depth_size * m_near_far.x * m_near_far.y * q;
+        m_buf.z_near_far = m_near_far;
+
+        m_buf.UpdateViewProj();
+
+        m_ubo->SetSubData(0, 1, &m_buf);
+    }
+    void Camera::SetOrtho(float width, float height, const glm::vec2& near_far, const glm::vec2& depth_range)
+    {        
+        m_is_ortho = true;
+        m_ortho_width = width;
+        m_ortho_height = height;
+        m_near_far = near_far;
+
+        float q = 1.0f / (near_far.y - near_far.x);
+        float depth_size = depth_range.y - depth_range.x;
+        m_buf.proj = glm::mat4(1);
+        m_buf.proj[0][0] = 2 / width;
+        m_buf.proj[1][1] = 2 / height;
+        m_buf.proj[2][2] = depth_size * q;
+        m_buf.proj[3][2] = depth_range.x - depth_size * near_far.x * q;
+        m_buf.z_near_far = m_near_far;
 
         m_buf.UpdateViewProj();
 
@@ -139,11 +181,11 @@ namespace RA {
         }
         SetCamera(new_eye, new_eye + view_dir, m_up);
     }
-    glm::vec3 Camera::Eye()
+    glm::vec3 Camera::Eye() const
     {
         return m_eye;
     }
-    glm::vec3 Camera::At() 
+    glm::vec3 Camera::At() const
     {
         return m_at;
     }
@@ -154,7 +196,7 @@ namespace RA {
             points[i] = bbox.Point(i);
         FitView(points, 8);
     }
-    glm::vec3 Camera::ViewDir()
+    glm::vec3 Camera::ViewDir() const
     {
         return m_at - m_eye;
     }
@@ -329,5 +371,83 @@ namespace RA {
     {
         QueryPerformanceCounter((LARGE_INTEGER*)&m_start);
         QueryPerformanceFrequency((LARGE_INTEGER*)&m_freq);
+    }
+    void Octree::SplitBox(const glm::AABB& box, glm::AABB* childs)
+    {
+        glm::vec3 pts[3] = {box.min, box.Center(), box.max};
+        for (int i = 0; i < 8; i++) {
+            int x = i / 4;
+            int y = (i / 2) % 2;
+            int z = i % 2;
+            childs[i].min.x = pts[x].x;
+            childs[i].min.y = pts[y].y;
+            childs[i].min.z = pts[z].z;
+            childs[i].max.x = pts[x+1].x;
+            childs[i].max.y = pts[y+1].y;
+            childs[i].max.z = pts[z+1].z;
+        }
+    }
+    bool Octree::Intersect(const glm::AABB& box, int tri_idx)
+    {
+        glm::vec3 pts[3];
+        pts[0] = m_triangles[tri_idx * 3];
+        pts[1] = m_triangles[tri_idx * 3 + 1];
+        pts[2] = m_triangles[tri_idx * 3 + 2];
+        return glm::Intersect(box, pts[0], pts[1], pts[2]);
+    }
+    void Octree::SplitRecursive(OctreeNode* node)
+    {
+        if (node->triangles.size() < m_max_triangles_to_split) return;
+
+        glm::AABB child_boxes[8];
+        SplitBox(node->box, child_boxes);
+        for (int i = 0; i < 8; i++) {
+            node->childs[i] = std::make_unique<OctreeNode>(child_boxes[i]);
+            for (int idx : node->triangles) {
+                if (Intersect(child_boxes[i], idx))
+                    node->childs[i]->triangles.push_back(idx);
+            }
+            SplitRecursive(node->childs[i].get());
+        }
+        node->triangles.clear();
+    }
+    void Octree::RayCastRecursive(OctreeNode* node, const glm::vec3& ray_start, const glm::vec3& ray_end, float* t)
+    {
+        if (!glm::Intersect(node->box, ray_start, ray_end, true)) return;
+        if (node->childs[0]) {
+            for (int i = 0; i < 8; i++) {
+                RayCastRecursive(node->childs[i].get(), ray_start, ray_end, t);
+            }
+        }
+        else {
+            for (int idx : node->triangles) {
+                float tcurr;
+                if (glm::Intersect(m_triangles[idx * 3], m_triangles[idx * 3 + 1], m_triangles[idx * 3 + 2], ray_start, ray_end, &tcurr)) {
+                    *t = glm::min(*t, tcurr);
+                }
+            }
+        }
+    }
+    float Octree::RayCast(const glm::vec3& ray_start, const glm::vec3& ray_end)
+    {
+        float t = 1.0f;
+        RayCastRecursive(m_root.get(), ray_start, ray_end, &t);
+        return t;
+    }
+    Octree::Octree(std::vector<glm::vec3> triangles, int max_triangles_to_split)
+    {
+        m_max_triangles_to_split = max_triangles_to_split;
+        m_triangles = std::move(triangles);
+
+        glm::AABB root_box;
+        for (const auto& v : m_triangles)
+            root_box += v;
+        
+        m_root = std::make_unique<OctreeNode>(root_box);
+        m_root->triangles.reserve(m_triangles.size() / 3);
+        for (int i = 0; i < m_triangles.size() / 3; i++) {
+            m_root->triangles.push_back(i);
+        }
+        SplitRecursive(m_root.get());
     }
 }

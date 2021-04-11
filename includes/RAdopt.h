@@ -172,13 +172,14 @@ namespace RA {
 
         std::unordered_map<Sampler, ComPtr<ID3D11SamplerState>, Sampler> m_samplers;
         ID3D11SamplerState* ObtainSampler(const Sampler& s);
-        void SetDefaultFBO();        
+        void SetDefaultFBO();
+        void SetViewport(const glm::vec2& size);
     public:
         Device(HWND wnd);
         ~Device(){}
     public:
         HWND Window() const;
-        FrameBufferPtr SetFrameBuffer(const FrameBufferPtr& fbo);
+        FrameBufferPtr SetFrameBuffer(const FrameBufferPtr& fbo, bool update_viewport = true);
         glm::ivec2 CurrentFrameBufferSize() const;
 
         States* States();
@@ -306,8 +307,8 @@ namespace RA {
         std::vector<UINT> m_uav_initial_counts;
         void PrepareViews();
     public:
-        void SetSizeFromWindow(bool update_viewport = true);
-        void SetSize(const glm::ivec2& xy, bool update_viewport = true);
+        void SetSizeFromWindow();
+        void SetSize(const glm::ivec2& xy);
         glm::ivec2 GetSize() const;
 
         void Clear(int slot, const glm::vec4& color);

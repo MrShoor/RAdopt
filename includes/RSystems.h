@@ -53,6 +53,8 @@ namespace RA {
 
         std::vector<MCMeshMaterialVertex> m_materials_data;
     public:
+        const MeshPtr& MeshData() const;
+
         std::shared_ptr<MCMesh> SPtr();
         MCMesh(MeshCollection* system, const MeshPtr& mesh, MemRangeIntfPtr vertices, MemRangeIntfPtr indices, MemRangeIntfPtr materials);
         ~MCMesh();
@@ -80,6 +82,9 @@ namespace RA {
 
         void UpdateInstanceVertex();
     public:
+        const MeshPtr& MeshData() const;
+        const MeshInstancePtr& InstanceData() const;
+
         glm::AABB BBox() const;
         void BindArmature(const MCArmaturePtr& arm);
 

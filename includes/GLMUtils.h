@@ -4,6 +4,8 @@
 #include <functional>
 
 namespace glm {
+    struct Plane;
+
     struct AABB {
         vec3 min;
         vec3 max;
@@ -25,6 +27,7 @@ namespace glm {
             default: return { 0,0,0 };
             }
         }
+        glm::Plane Plane(int idx) const;
         inline bool IsEmpty() const {
             return (min.x >= max.x) || (min.y >= max.y) || (min.z >= max.z);
         }
@@ -109,6 +112,10 @@ namespace glm {
         *intpt = b * m_inv;
         return true;
     }
+
+    bool Intersect(const glm::AABB& box, const glm::vec3& pt1, const glm::vec3& pt2, const glm::vec3& pt3);
+    bool Intersect(const glm::AABB& box, const glm::vec3& seg_start, const glm::vec3& seg_end, bool solid_aabb);
+    bool Intersect(const vec3& pt1, const vec3& pt2, const vec3& pt3, const vec3& seg_start, const vec3& seg_end, float* t);
 
     struct Bezier2_2d {
         vec2 pt[3];
