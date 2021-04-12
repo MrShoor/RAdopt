@@ -2,6 +2,7 @@
 #include "RAdopt.h"
 #include "GLM.h"
 #include "GLMUtils.h"
+#include <filesystem>
 
 namespace RA {
     enum class FrustumPlane {Top, Bottom, Right, Left, Near, Far};
@@ -83,10 +84,9 @@ namespace RA {
     };
     class TexManagerIntf {
     public:
-        virtual TexDataIntf* Load(const char* filename) = 0;
+        virtual TexDataIntf* Load(const std::filesystem::path& filename) = 0;
     };
     TexManagerIntf* TM();
-
 
     class MemRangeIntf {
     public:
@@ -132,9 +132,10 @@ namespace RA {
         void SplitBox(const glm::AABB& box, glm::AABB* childs);
         bool Intersect(const glm::AABB& box, int tri_idx);
         void SplitRecursive(OctreeNode* node);
-        void RayCastRecursive(OctreeNode* node, const glm::vec3& ray_start, const glm::vec3& ray_end, float* t);
+        void RayCastRecursive(OctreeNode* node, const glm::vec3& ray_start, const glm::vec3& ray_end, float* t, glm::vec3* normal);
     public:
         float RayCast(const glm::vec3& ray_start, const glm::vec3& ray_end);
+        bool RayCast(const glm::vec3& ray_start, const glm::vec3& ray_end, float* t, glm::vec3* normal);
         Octree(std::vector<glm::vec3> triangles, int max_triangles_to_split);
     };
 }

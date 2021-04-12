@@ -82,24 +82,24 @@ namespace RA {
         }
         return it->second->SPtr();
     }
-    void MeshCollection::PrepareBuffers(MeshCollectionBuffers* bufs, std::vector<DrawIndexedCmd>* draw_commands)
+    void MeshCollection::PrepareBuffers(MeshCollectionBuffers* bufs, MeshCollectionDrawCommands* draw_commands)
     {
         PrepareBuffers(m_instances, bufs, draw_commands);
     }
-    void MeshCollection::PrepareBuffers(const std::vector<MCMeshInstance*>& instances, MeshCollectionBuffers* bufs, std::vector<DrawIndexedCmd>* draw_commands)
+    void MeshCollection::PrepareBuffers(const std::vector<MCMeshInstance*>& instances, MeshCollectionBuffers* bufs, MeshCollectionDrawCommands* draw_commands)
     {
         ValidateArmatures();
         FillBuffers(bufs);
         for (const auto& inst : instances) {
-            draw_commands->push_back(GetDrawCommand(inst));
+            draw_commands->commands[inst->GetGroupID()].push_back(GetDrawCommand(inst));
         }
     }
-    void MeshCollection::PrepareBuffers(const std::vector<MCMeshInstancePtr>& instances, MeshCollectionBuffers* bufs, std::vector<DrawIndexedCmd>* draw_commands)
+    void MeshCollection::PrepareBuffers(const std::vector<MCMeshInstancePtr>& instances, MeshCollectionBuffers* bufs, MeshCollectionDrawCommands* draw_commands)
     {
         ValidateArmatures();
         FillBuffers(bufs);
-        for (const auto& inst : instances) {
-            draw_commands->push_back(GetDrawCommand(inst.get()));
+        for (const auto& inst : instances) {            
+            draw_commands->commands[inst->GetGroupID()].push_back(GetDrawCommand(inst.get()));
         }
     }
     MCArmaturePtr MeshCollection::Create_Armature(const fs::path& filename, const std::string& armature_name)
@@ -175,7 +175,7 @@ namespace RA {
         AVMScene* scene = ObtainScene(filename);
         return Clone_MeshInstance(scene, instance_name);
     }
-    std::vector<MCMeshInstancePtr> MeshCollection::Clone_MeshInstances(const fs::path& filename, const std::vector<std::string>& instances)
+    std::vector<MCMeshInstancePtr> MeshCollection::Clone_MeshInstances(const fs::path& filename, const std::vector<std::string>& instances, uint32_t groupID)
     {
         std::vector<MCMeshInstancePtr> res;
         AVMScene* scene = ObtainScene(filename);
@@ -184,12 +184,14 @@ namespace RA {
             res.reserve(instances.size());
             for (const auto& name : instances) {
                 res.push_back(Clone_MeshInstance(scene, name));
+                res.back()->SetGroupID(groupID);
             }
         }
         else {
             res.reserve(scene->instances.size());
             for (const auto& it : scene->instances) {
                 res.push_back(Clone_MeshInstance(scene, it.first));
+                res.back()->SetGroupID(groupID);
             }
         }
         return res;
@@ -290,6 +292,14 @@ namespace RA {
     const MeshInstancePtr& MCMeshInstance::InstanceData() const {
         return m_inst;
     }
+    uint32_t MCMeshInstance::GetGroupID()
+    {
+        return m_group_id;
+    }
+    void MCMeshInstance::SetGroupID(uint32_t group_id)
+    {
+        m_group_id = group_id;
+    }
     glm::AABB MCMeshInstance::BBox() const {
         return m_inst->BBox();
     }
@@ -315,6 +325,7 @@ namespace RA {
     }
     MCMeshInstance::MCMeshInstance(MeshCollection* system, const MCMeshPtr& mesh, const MeshInstancePtr& instance, MemRangeIntfPtr remap_range)
     {
+        m_group_id = 0;
         m_sys = system;
         m_sys->m_instances.push_back(this);
         m_idx = int(m_sys->m_instances.size() - 1);
@@ -393,5 +404,109 @@ namespace RA {
         roughness = mat.roughness;
         emission = mat.emission;
         emission_strength = mat.emission_strength;
+    }
+    void DecalsManager::AllocateNewSBO()
+    {
+        int n = glm::nextPowerOfTwo(int(m_decals.size()));
+        m_sbo->SetState(sizeof(DecalData), n);
+        m_sbo->SetSubData(0, int(m_decals_data.size()), m_decals_data.data());
+    }
+    void DecalsManager::UpdateDecal(int idx)
+    {
+        if (m_sbo->VertexCount() < m_decals.size()) {
+            AllocateNewSBO();
+        }
+        else {
+            if (m_sbo->VertexCount() > m_decals.size() * 3) {
+                AllocateNewSBO();
+            }
+            else {
+                m_sbo->SetSubData(idx, 1, &m_decals_data[idx]);
+            }
+        }
+    }
+    DecalsManager_Buffers DecalsManager::GetBuffers()
+    {
+        DecalsManager_Buffers res;
+        res.decals_count = int(m_decals_data.size());
+        res.atlas = &m_atlas;
+        res.sbo = &m_sbo;
+        return res;
+    }
+    DecalsManager::DecalsManager(const DevicePtr& dev)
+    {
+        m_dev = dev;
+        m_atlas = std::make_shared<Atlas>(m_dev);
+        m_sbo = m_dev->Create_StructuredBuffer();
+    }
+    DecalPtr DecalsManager::Create_Decal(const fs::path& texture_filename)
+    {        
+        return std::shared_ptr<Decal>(new Decal(this, m_atlas->ObtainSprite(texture_filename)));
+    }
+    void Decal::UpdateDecal()
+    {
+        m_man->UpdateDecal(m_idx);
+    }
+    Decal::Decal(DecalsManager* man, const AtlasSpritePtr sprite)
+    {
+        m_man = man;
+        m_idx = int(m_man->m_decals.size());
+        m_man->m_decals.push_back(this);
+        m_man->m_decals_data.emplace_back(sprite.get());
+    }
+    glm::vec3 Decal::GetPos() const
+    {
+        return m_man->m_decals_data[m_idx].pos;
+    }
+    void Decal::SetPos(const glm::vec3& pos)
+    {
+        m_man->m_decals_data[m_idx].pos = pos;
+        UpdateDecal();
+    }
+    glm::quat Decal::GetRotate() const
+    {
+        return m_man->m_decals_data[m_idx].rotate;
+    }
+    void Decal::SetRotate(const glm::quat& rotate)
+    {
+        m_man->m_decals_data[m_idx].rotate = rotate;
+        UpdateDecal();
+    }
+    glm::vec3 Decal::GetSize() const
+    {
+        return m_man->m_decals_data[m_idx].size;
+    }
+    void Decal::SetSize(const glm::vec3& size)
+    {
+        m_man->m_decals_data[m_idx].size = size;
+        UpdateDecal();
+    }
+    glm::vec4 Decal::GetColor() const
+    {
+        return m_man->m_decals_data[m_idx].color;
+    }
+    void Decal::SetColor(const glm::vec4& color)
+    {
+        m_man->m_decals_data[m_idx].color = color;
+        UpdateDecal();
+    }
+    void Decal::SetState(const glm::vec3& pos, const glm::quat& rot, const glm::vec3& size, const glm::vec4& color)
+    {
+        DecalData& data = m_man->m_decals_data[m_idx];
+        data.pos = pos;
+        data.rotate = rot;
+        data.size = size;
+        data.color = color;
+        UpdateDecal();
+    }
+    Decal::~Decal()
+    {
+        m_man->m_decals[m_idx] = m_man->m_decals.back();
+        m_man->m_decals_data[m_idx] = m_man->m_decals_data.back();
+        m_man->m_decals[m_idx]->m_idx = m_idx;
+        m_man->m_decals.pop_back();
+        m_man->m_decals_data.pop_back();
+        if (m_man->m_decals_data.size() != m_idx)
+            m_man->m_decals[m_idx]->UpdateDecal();
     }
 }

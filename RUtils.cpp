@@ -317,7 +317,7 @@ namespace RA {
             return m_size;
         }
         int Allocated() const override {
-            return m_allocated_space;
+            return m_allocated_space; 
         }
         int FreeSpace() const override {
             return m_size - m_allocated_space;
@@ -411,19 +411,25 @@ namespace RA {
         }
         node->triangles.clear();
     }
-    void Octree::RayCastRecursive(OctreeNode* node, const glm::vec3& ray_start, const glm::vec3& ray_end, float* t)
+    void Octree::RayCastRecursive(OctreeNode* node, const glm::vec3& ray_start, const glm::vec3& ray_end, float* t, glm::vec3* normal)
     {
         if (!glm::Intersect(node->box, ray_start, ray_end, true)) return;
         if (node->childs[0]) {
             for (int i = 0; i < 8; i++) {
-                RayCastRecursive(node->childs[i].get(), ray_start, ray_end, t);
+                RayCastRecursive(node->childs[i].get(), ray_start, ray_end, t, normal);
             }
         }
         else {
             for (int idx : node->triangles) {
                 float tcurr;
-                if (glm::Intersect(m_triangles[idx * 3], m_triangles[idx * 3 + 1], m_triangles[idx * 3 + 2], ray_start, ray_end, &tcurr)) {
-                    *t = glm::min(*t, tcurr);
+                glm::vec3 p[3] = { m_triangles[idx * 3], m_triangles[idx * 3 + 1], m_triangles[idx * 3 + 2] };
+                if (glm::Intersect(p[0], p[1], p[2], ray_start, ray_end, &tcurr)) {
+                    if (*t > tcurr) {
+                        glm::vec3 n = glm::cross(p[1] - p[0], p[2] - p[0]);
+                        if (glm::dot(n, ray_end - ray_start) > 0) n = -n;
+                        *normal = glm::normalize(n);
+                        *t = tcurr;
+                    }
                 }
             }
         }
@@ -431,8 +437,17 @@ namespace RA {
     float Octree::RayCast(const glm::vec3& ray_start, const glm::vec3& ray_end)
     {
         float t = 1.0f;
-        RayCastRecursive(m_root.get(), ray_start, ray_end, &t);
+        glm::vec3 tmpn;
+        RayCastRecursive(m_root.get(), ray_start, ray_end, &t, &tmpn);
         return t;
+    }
+    bool Octree::RayCast(const glm::vec3& ray_start, const glm::vec3& ray_end, float* t, glm::vec3* normal)
+    {
+        float tmpt = 1.0f;
+        RayCastRecursive(m_root.get(), ray_start, ray_end, &tmpt, normal);
+        if (tmpt == 1.0f) return false;
+        *t = tmpt;
+        return true;
     }
     Octree::Octree(std::vector<glm::vec3> triangles, int max_triangles_to_split)
     {

@@ -654,7 +654,7 @@ namespace RA {
         CheckD3DErr(m_device->m_device->CreateRenderTargetView(m_handle.Get(), &desc, &res));
         return res;
     }
-    ComPtr<ID3D11DepthStencilView> Texture2D::BuildDepthStencilView(int mip, int slice_start, int slice_count) const
+    ComPtr<ID3D11DepthStencilView> Texture2D::BuildDepthStencilView(int mip, int slice_start, int slice_count, bool read_only) const
     {
         if (!m_handle) return nullptr;
         ComPtr<ID3D11DepthStencilView> res;
@@ -671,7 +671,7 @@ namespace RA {
         desc.Texture2DArray.MipSlice = mip;
         desc.Texture2DArray.FirstArraySlice = slice_start;
         desc.Texture2DArray.ArraySize = slice_count;
-        desc.Flags = 0;
+        desc.Flags = read_only ? (D3D11_DSV_READ_ONLY_DEPTH) : 0;
         CheckD3DErr(m_device->m_device->CreateDepthStencilView(m_handle.Get(), &desc, &res));
         return res;
     }
@@ -819,7 +819,7 @@ namespace RA {
         box.bottom = offset.y + size.y;
         box.front = 0;
         box.back = 1;
-        m_device->m_deviceContext->UpdateSubresource(m_handle.Get(), res_idx, &box, data, PixelsSize(m_fmt) * m_size.x, PixelsSize(m_fmt) * m_size.x * m_size.y);
+        m_device->m_deviceContext->UpdateSubresource(m_handle.Get(), res_idx, &box, data, PixelsSize(m_fmt) * size.x, PixelsSize(m_fmt) * size.x * size.y);
     }
     void Texture2D::GenerateMips()
     {
@@ -1801,7 +1801,7 @@ namespace RA {
             }
         }
 
-        if (m_depth && (!m_depth_view)) m_depth_view = m_depth->BuildDepthStencilView(m_depth_params.mip, m_depth_params.slice_start, m_depth_params.slice_count);
+        if (m_depth && (!m_depth_view)) m_depth_view = m_depth->BuildDepthStencilView(m_depth_params.mip, m_depth_params.slice_start, m_depth_params.slice_count, m_depth_params.read_only);
     }
     void FrameBuffer::SetSizeFromWindow()
     {
@@ -1811,6 +1811,12 @@ namespace RA {
     }
     void FrameBuffer::SetSize(const glm::ivec2& xy)
     {
+        if (m_size != xy) {
+            for (int i = 0; i < D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT; i++)
+                m_color_views[i] = nullptr;
+            m_depth_view = nullptr;
+            m_colors_to_bind.clear();
+        }
         m_size = xy;
         for (int i = 0; i < D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT; i++) {
             if (!m_tex[i]) continue;
@@ -1871,6 +1877,14 @@ namespace RA {
             m_depth_params = new_params;
             m_depth_view = nullptr;
         }
+    }
+    Texture2DPtr FrameBuffer::GetSlot(int slot) const
+    {
+        return m_tex[slot];
+    }
+    Texture2DPtr FrameBuffer::GetDS() const
+    {
+        return m_depth;
     }
     void FrameBuffer::ClearUAV(int slot, uint32_t v)
     {

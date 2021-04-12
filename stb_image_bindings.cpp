@@ -5,7 +5,7 @@
 #include "stb_image.h"
 
 namespace RA {
-    TexDataIntf* STB_TexManager::Load(const char* filename)
+    TexDataIntf* STB_TexManager::Load(const fs::path& filename)
     {
 		fs::path p = std::filesystem::absolute(filename);
 		auto it = m_cache.find(p);

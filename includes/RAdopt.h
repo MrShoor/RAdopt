@@ -227,7 +227,7 @@ namespace RA {
         std::unordered_map<glm::ivec3, ComPtr<ID3D11UnorderedAccessView>, ivec3_hasher> m_uav;
 
         ComPtr<ID3D11RenderTargetView> BuildTargetView(int mip, int slice_start, int slice_count) const;
-        ComPtr<ID3D11DepthStencilView> BuildDepthStencilView(int mip, int slice_start, int slice_count) const;
+        ComPtr<ID3D11DepthStencilView> BuildDepthStencilView(int mip, int slice_start, int slice_count, bool read_only) const;
         ComPtr<ID3D11ShaderResourceView> GetShaderResourceView(bool as_array, bool as_cubemap);
         ComPtr<ID3D11UnorderedAccessView> GetUnorderedAccessView(int mip, int slice_start, int slice_count);
     public:
@@ -316,6 +316,8 @@ namespace RA {
 
         void SetSlot(int slot, const Texture2DPtr& tex, int mip = 0, int slice_start = 0, int slice_count = 1);
         void SetDS(const Texture2DPtr& tex, int mip = 0, int slice_start = 0, int slice_count = 1, bool readonly = false);
+        Texture2DPtr GetSlot(int slot) const;
+        Texture2DPtr GetDS() const;
 
         void ClearUAV(int slot, uint32_t v);
         void SetUAV(int slot, const Texture2DPtr& tex, int mip = 0, int slice_start = 0, int slice_count = 1);

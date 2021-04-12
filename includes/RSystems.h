@@ -2,6 +2,7 @@
 #include "RAdopt.h"
 #include "RUtils.h"
 #include "RModels.h"
+#include "RAtlas.h"
 #include <unordered_set>
 
 namespace RA {
@@ -80,10 +81,15 @@ namespace RA {
         MeshInstancePtr m_inst;
         MemRangeIntfPtr m_remap_range;
 
+        uint32_t m_group_id;
+
         void UpdateInstanceVertex();
     public:
         const MeshPtr& MeshData() const;
         const MeshInstancePtr& InstanceData() const;
+
+        uint32_t GetGroupID();
+        void SetGroupID(uint32_t group_id);
 
         glm::AABB BBox() const;
         void BindArmature(const MCArmaturePtr& arm);
@@ -103,6 +109,9 @@ namespace RA {
         const VertexBufferPtr* instances;
         const StructuredBufferPtr* bones;
         const StructuredBufferPtr* bones_remap;
+    };
+    struct MeshCollectionDrawCommands {
+        std::unordered_map<uint32_t, std::vector<DrawIndexedCmd>> commands;
     };
 
     class MeshCollection {
@@ -148,14 +157,83 @@ namespace RA {
         void FillBuffers(MeshCollectionBuffers* bufs);
         DrawIndexedCmd GetDrawCommand(MCMeshInstance* inst);
     public:
-        void PrepareBuffers(MeshCollectionBuffers* bufs, std::vector<DrawIndexedCmd>* draw_commands);
-        void PrepareBuffers(const std::vector<MCMeshInstance*>& instances, MeshCollectionBuffers* bufs, std::vector<DrawIndexedCmd>* draw_commands);
-        void PrepareBuffers(const std::vector<MCMeshInstancePtr>& instances, MeshCollectionBuffers* bufs, std::vector<DrawIndexedCmd>* draw_commands);
+        void PrepareBuffers(MeshCollectionBuffers* bufs, MeshCollectionDrawCommands* draw_commands);
+        void PrepareBuffers(const std::vector<MCMeshInstance*>& instances, MeshCollectionBuffers* bufs, MeshCollectionDrawCommands* draw_commands);
+        void PrepareBuffers(const std::vector<MCMeshInstancePtr>& instances, MeshCollectionBuffers* bufs, MeshCollectionDrawCommands* draw_commands);
 
         MCArmaturePtr Create_Armature(const fs::path& filename, const std::string& armature_name);
         MCMeshInstancePtr Clone_MeshInstance(const fs::path& filename, const std::string& instance_name);
-        std::vector<MCMeshInstancePtr> Clone_MeshInstances(const fs::path& filename, const std::vector<std::string>& instances);
+        std::vector<MCMeshInstancePtr> Clone_MeshInstances(const fs::path& filename, const std::vector<std::string>& instances, uint32_t groupID);
 
         MeshCollection(const DevicePtr& dev);
     };
+
+    class DecalsManager;
+
+    struct DecalData {
+        glm::vec4 color;
+        glm::quat rotate;        
+        glm::vec3 size;
+        float dummy;
+        glm::vec3 pos;
+        int slice;
+        glm::vec4 rect;
+        DecalData(const AtlasSprite* sprite) : 
+            color(1.0), 
+            rotate(0,0,0,1),
+            size(1.0, 1.0, 1.0),
+            dummy(0),
+            pos(0,0,0),
+            slice(sprite->Slice()), 
+            rect(sprite->Rect()) {}
+    };
+
+    class Decal {
+        friend class DecalsManager;
+    private:
+        DecalsManager* m_man;
+        int m_idx;
+        AtlasSpritePtr m_sprite;
+
+        void UpdateDecal();
+        Decal(DecalsManager* man, const AtlasSpritePtr sprite);
+    public:
+        glm::vec3 GetPos() const;
+        void SetPos(const glm::vec3& pos);
+        glm::quat GetRotate() const;
+        void SetRotate(const glm::quat& transform);
+        glm::vec3 GetSize() const;
+        void SetSize(const glm::vec3& size);
+        glm::vec4 GetColor() const;
+        void SetColor(const glm::vec4& color);
+
+        void SetState(const glm::vec3& pos, const glm::quat& rot, const glm::vec3& size, const glm::vec4& color);
+
+        ~Decal();
+    };
+    using DecalPtr = std::shared_ptr<Decal>;
+
+    struct DecalsManager_Buffers {
+        int decals_count;
+        const AtlasPtr* atlas;
+        const StructuredBufferPtr* sbo;
+    };
+
+    class DecalsManager {
+        friend class Decal;
+    private:
+        DevicePtr m_dev;
+        std::vector<Decal*> m_decals;
+        std::vector<DecalData> m_decals_data;
+
+        AtlasPtr m_atlas;
+        StructuredBufferPtr m_sbo;
+        void AllocateNewSBO();
+        void UpdateDecal(int idx);
+    public:
+        DecalsManager_Buffers GetBuffers();
+        DecalsManager(const DevicePtr& dev);
+        DecalPtr Create_Decal(const fs::path& texture_filename);
+    };
+    using DecalsManagerPtr = std::shared_ptr<DecalsManager>;
 }

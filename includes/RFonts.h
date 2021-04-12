@@ -1,67 +1,8 @@
 #pragma once
 #include "RAdopt.h"
+#include "RAtlas.h"
 
 namespace RA {
-    class AtlasSprite;
-    using AtlasSpritePtr = std::shared_ptr<AtlasSprite>;
-
-    struct SpriteSBOVertex {
-        int slice;
-        glm::vec2 xy;
-        glm::vec2 size;
-        SpriteSBOVertex(const AtlasSprite* sprite);
-    };
-
-    class Atlas {
-        friend class AtlasSprite;        
-    public:
-        struct Node {
-            std::unique_ptr<Node> child[2];
-            glm::ivec4 rect;
-            std::weak_ptr<AtlasSprite> sprite;
-            Node* Insert(const AtlasSpritePtr& img);
-            Node();
-            Node(const glm::ivec2& root_size);
-        };
-    protected:
-        DevicePtr m_dev;
-        Texture2DPtr m_tex;
-        StructuredBufferPtr m_glyphs_sbo;
-        bool m_tex_valid;
-
-        std::vector<AtlasSprite*> m_sprites;
-
-        std::vector<std::unique_ptr<Node>> m_roots;
-
-        virtual void ValidateTexture() = 0;
-        void ValidateSBO();
-        void ValidateAll();
-    public:
-        StructuredBufferPtr GlyphsSBO();
-        Texture2DPtr Texture();
-        Atlas(const DevicePtr& dev);
-        virtual ~Atlas();
-    };
-
-    class AtlasSprite {
-        friend class Atlas;
-        friend struct Atlas::Node;
-        friend struct SpriteSBOVertex;
-    protected:
-        Atlas* m_owner;
-        int m_idx;
-        int m_slice;
-        glm::ivec4 m_rect;
-        glm::ivec2 m_size;
-        AtlasSprite(Atlas* owner, const glm::ivec2& size);
-    public:
-        int Index() const;
-        int Slice() const;
-        glm::ivec2 Pos() const;
-        glm::ivec2 Size() const;
-        virtual ~AtlasSprite();
-    };
-
     class Sprite_Glyph;
     using Sprite_GlyphPtr = std::shared_ptr<Sprite_Glyph>;
     struct Glyph_Key {
@@ -96,7 +37,7 @@ namespace RA {
         Glyph_Data(const Glyph_Key& key);
     };
 
-    class Altas_GlyphsSDF : public Atlas {
+    class Altas_GlyphsSDF : public BaseAtlas {
     protected:
         RA::ProgramPtr m_gen_glyph_prog;
         RA::StructuredBufferPtr m_segments_sbo;
@@ -111,11 +52,11 @@ namespace RA {
     };
     using Altas_GlyphsSDFPtr = std::shared_ptr<Altas_GlyphsSDF>;
 
-    class Sprite_Glyph : public AtlasSprite {
+    class Sprite_Glyph : public BaseAtlasSprite {
         friend class Altas_GlyphsSDF;
     protected:
         Glyph_Data m_data;
-        Sprite_Glyph(Atlas* owner, Glyph_Data data);
+        Sprite_Glyph(BaseAtlas* owner, Glyph_Data data);
     public:
         glm::vec3 XXXMetricsScaled(float font_size);
         glm::vec4 YYYYMetricsScaled(float font_size);

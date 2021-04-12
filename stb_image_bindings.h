@@ -30,6 +30,6 @@ namespace RA {
     private:
         std::unordered_map<fs::path, std::unique_ptr<STB_TexData>, path_hasher> m_cache;
     public:
-        TexDataIntf* Load(const char* filename) override;
+        TexDataIntf* Load(const fs::path& filename) override;
     };
 }

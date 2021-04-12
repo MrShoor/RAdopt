@@ -24,124 +24,6 @@ namespace RA {
             callback(s.substr(start_i, s.size() - start_i), 0);
     }
 
-    void Atlas::ValidateSBO()
-    {
-        std::vector<SpriteSBOVertex> data;
-        data.reserve(m_sprites.size());
-        for (const auto& s : m_sprites) {
-            data.emplace_back(s);
-        }
-        m_glyphs_sbo->SetState(sizeof(SpriteSBOVertex), int(data.size()), false, false, data.data());
-    }
-    void Atlas::ValidateAll()
-    {
-        if (!m_tex_valid) {
-            //m_tex_valid = true;
-            ValidateTexture();
-            ValidateSBO();
-        }
-    }
-    StructuredBufferPtr Atlas::GlyphsSBO()
-    {
-        ValidateAll();
-        return m_glyphs_sbo;
-    }
-    Texture2DPtr Atlas::Texture()
-    {
-        ValidateAll();
-        return m_tex;
-    }
-    Atlas::Atlas(const DevicePtr& dev)
-    {
-        m_dev = dev;
-        m_tex_valid = false;
-        m_glyphs_sbo = m_dev->Create_StructuredBuffer();
-    }
-    Atlas::~Atlas()
-    {
-    }
-    AtlasSprite::AtlasSprite(Atlas* owner, const glm::ivec2& size)
-    {
-        m_slice = 0;
-        m_owner = owner;
-        m_idx = int(m_owner->m_sprites.size());
-        m_owner->m_sprites.push_back(this);
-        m_size = size;
-        m_rect = { 0,0,0,0 };
-    }
-    int AtlasSprite::Index() const
-    {
-        return m_idx;
-    }
-    int AtlasSprite::Slice() const
-    {
-        return m_slice;
-    }
-    glm::ivec2 AtlasSprite::Pos() const
-    {
-        return m_rect.xy();
-    }
-    glm::ivec2 AtlasSprite::Size() const
-    {
-        return m_size;
-    }
-    AtlasSprite::~AtlasSprite()
-    {
-        if (m_owner) {
-            m_owner->m_sprites[m_idx] = m_owner->m_sprites.back();
-            m_owner->m_sprites[m_idx]->m_idx = m_idx;
-            m_owner->m_sprites.pop_back();
-        }
-    }
-    Atlas::Node* Atlas::Node::Insert(const AtlasSpritePtr& img)
-    {
-        Node* newNode = nullptr;
-        if (child[0]) { //we're not a leaf then
-            newNode = child[0]->Insert(img);
-            if (newNode) return newNode;
-            return child[1]->Insert(img);
-        }
-        else {
-            if (sprite.lock()) return nullptr;
-            glm::ivec2 size = img->Size();
-            if ((size.x > rect.z) || (size.y > rect.w)) return nullptr;
-
-            if ((size.x == rect.z) && (size.y == rect.w)) {
-                sprite = img;
-                img->m_rect = rect;
-                return this;
-            }
-        
-            this->child[0] = std::make_unique<Node>();
-            this->child[1] = std::make_unique<Node>();
-        
-            int dw = rect.z - size.x;
-            int dh = rect.w - size.y;
-        
-            if (dw > dh) {
-                child[0]->rect = glm::vec4(rect.x, rect.y, size.x, rect.w);
-                child[1]->rect = glm::vec4(rect.x + size.x, rect.y, rect.z - size.x, rect.w);
-            }
-            else {
-                child[0]->rect = glm::vec4(rect.x, rect.y, rect.z, size.y);
-                child[1]->rect = glm::vec4(rect.x, rect.y + size.y, rect.z, rect.w - size.y);
-            }
-
-            return child[0]->Insert(img);
-        }
-    }
-    Atlas::Node::Node()
-    {
-        child[0] = nullptr;
-        child[1] = nullptr;
-        rect = { 0,0,0,0 };
-    }
-    Atlas::Node::Node(const glm::ivec2& root_size)
-    {
-        child[0] = nullptr;
-        child[1] = nullptr;
-        rect = { 0, 0, root_size.x, root_size.y };
-    }
     const char* Altas_GlyphsSDF::ObtainFontPtr(const char* font)
     {
         for (const auto& s : m_fonts) {
@@ -173,7 +55,7 @@ namespace RA {
         }
         m_gen_glyph_prog->CS_SetUAV(0, nullptr);
     }
-    Altas_GlyphsSDF::Altas_GlyphsSDF(const DevicePtr& dev) : Atlas(dev)
+    Altas_GlyphsSDF::Altas_GlyphsSDF(const DevicePtr& dev) : BaseAtlas(dev)
     {
         m_gen_glyph_prog = m_dev->Create_Program();
         m_gen_glyph_prog->Load("generate_sdf_glyph", false, "D:\\Projects\\Beatty\\Beatty\\shaders\\!Out");
@@ -204,7 +86,7 @@ namespace RA {
         }
         return it->second;
     }
-    Sprite_Glyph::Sprite_Glyph(Atlas* owner, Glyph_Data data) : AtlasSprite(owner, data.size), m_data(std::move(data))
+    Sprite_Glyph::Sprite_Glyph(BaseAtlas* owner, Glyph_Data data) : BaseAtlasSprite(owner, data.size), m_data(std::move(data))
     {
     }
     glm::vec3 Sprite_Glyph::XXXMetricsScaled(float font_size)
@@ -346,7 +228,7 @@ namespace RA {
         }
         DeleteDC(dc);
     }
-    SpriteSBOVertex::SpriteSBOVertex(const AtlasSprite* sprite)
+    SpriteSBOVertex::SpriteSBOVertex(const BaseAtlasSprite* sprite)
     {
         slice = sprite->m_slice;
         xy = sprite->m_rect.xy();
