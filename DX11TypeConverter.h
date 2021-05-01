@@ -152,6 +152,18 @@ namespace RA {
         }
         return max_mip;
     }
+    int MipLevelsCount(int w, int h, int z) {
+        assert(w >= 0);
+        assert(h >= 0);
+
+        int min_size = glm::min(glm::min(w, h), z);
+        int max_mip = 0;
+        while (min_size > 0) {
+            min_size >>= 1;
+            max_mip++;
+        }
+        return max_mip;
+    }
 
     D3D11_BLEND ToDX(Blend b) {
         switch (b) {

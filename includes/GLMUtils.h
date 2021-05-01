@@ -79,7 +79,7 @@ namespace glm {
         AABB res;
         for (int i = 0; i < 8; i++) {
             glm::vec4 tmp = (m * glm::vec4(b.Point(i), 1.0f));
-            glm::vec3 tmp3 = tmp.xyz();
+            glm::vec3 tmp3 = tmp.xyz() / tmp.w;
             res += tmp3;
         }
         return res;

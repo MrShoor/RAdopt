@@ -10,6 +10,7 @@
 #include <vector>
 #include <unordered_map>
 #include <iostream>
+#include <filesystem>
 
 namespace RA {
     using namespace Microsoft::WRL;
@@ -60,6 +61,12 @@ namespace RA {
     const static Sampler cSampler_Linear { 
         TexFilter::linear , TexFilter::linear , 16 , 
         TexWrap::repeat, TexWrap::repeat, TexWrap::repeat, 
+        {0,0,0,0},
+        Compare::never
+    };
+    const static Sampler cSampler_NoFilter{
+        TexFilter::point , TexFilter::none , 0 ,
+        TexWrap::repeat, TexWrap::repeat, TexWrap::repeat,
         {0,0,0,0},
         Compare::never
     };
@@ -132,6 +139,7 @@ namespace RA {
 
     class FrameBuffer;
     class Texture2D;
+    class Texture3D;
     class VertexBuffer;
     class StructuredBuffer;
     class IndexBuffer;
@@ -140,6 +148,7 @@ namespace RA {
 
     using FrameBufferPtr = std::shared_ptr<FrameBuffer>;
     using Texture2DPtr = std::shared_ptr<Texture2D>;
+    using Texture3DPtr = std::shared_ptr<Texture3D>;
     using VertexBufferPtr = std::shared_ptr<VertexBuffer>;
     using StructuredBufferPtr = std::shared_ptr<StructuredBuffer>;
     using IndexBufferPtr = std::shared_ptr<IndexBuffer>;
@@ -148,6 +157,7 @@ namespace RA {
 
     class Device : public std::enable_shared_from_this<Device> {
         friend class Texture2D;
+        friend class Texture3D;
         friend class VertexBuffer;
         friend class StructuredBuffer;
         friend class IndexBuffer;
@@ -184,10 +194,12 @@ namespace RA {
 
         States* States();
 
+        FrameBufferPtr ActiveFrameBuffer() const;
         Program* ActiveProgram();
 
         FrameBufferPtr Create_FrameBuffer();
         Texture2DPtr Create_Texture2D();
+        Texture3DPtr Create_Texture3D();
         VertexBufferPtr Create_VertexBuffer();
         StructuredBufferPtr Create_StructuredBuffer();
         IndexBufferPtr Create_IndexBuffer();
@@ -243,6 +255,34 @@ namespace RA {
         void ReadBack(void* data, int mip, int array_slice);
 
         Texture2D(const DevicePtr& device);
+    };
+
+    class Texture3D : public DevChild {
+        friend class Program;
+    private:
+        struct ivec3_hasher {
+            std::size_t operator() (const glm::ivec3& v) const {
+                return std::hash<int>()(v.x) ^ std::hash<int>()(v.y) ^ std::hash<int>()(v.z);
+            }
+        };
+    private:
+        TextureFmt m_fmt;
+        glm::ivec3 m_size;
+        int m_mips_count;
+        ComPtr<ID3D11Texture3D> m_handle;
+        ComPtr<ID3D11ShaderResourceView> m_srv;
+        std::unordered_map<glm::ivec3, ComPtr<ID3D11UnorderedAccessView>, ivec3_hasher> m_uav;
+        ComPtr<ID3D11ShaderResourceView> GetShaderResourceView();
+        ComPtr<ID3D11UnorderedAccessView> GetUnorderedAccessView(int mip, int z_start, int z_count);
+        void ClearStoredViews();
+    public:
+        TextureFmt Format() const;
+        glm::ivec3 Size() const;
+        int MipsCount() const;
+
+        void SetState(TextureFmt fmt, glm::ivec3 size, int mip_levels = 0, const void* data = nullptr);
+
+        Texture3D(const DevicePtr& device);
     };
 
     class FrameBuffer : public DevChild {
@@ -490,6 +530,7 @@ namespace RA {
         void SetResource(const char* name, const UniformBufferPtr& ubo);
         void SetResource(const char* name, const StructuredBufferPtr& sbo);
         void SetResource(const char* name, const Texture2DPtr& tex, bool as_array = false, bool as_cubemap = false);
+        void SetResource(const char* name, const Texture3DPtr& tex);
         void SetResource(const char* name, const Sampler& s);
 
         void SetInputBuffers(const VertexBufferPtr& vbo, const IndexBufferPtr& ibo, const VertexBufferPtr& instances, int instanceStepRate = 1);
@@ -500,6 +541,7 @@ namespace RA {
         void Draw(PrimTopology pt, int vert_start = 0, int vert_count = -1, int instance_count = -1, int base_instance = 0);
         
         void CS_SetUAV(int slot, const Texture2DPtr& tex, int mip, int slice_start, int slice_count);
+        void CS_SetUAV(int slot, const Texture3DPtr& tex, int mip, int z_start, int z_count);
         void CS_SetUAV(int slot, const StructuredBufferPtr& buf, int initial_counter = -1);
         void CS_ClearUAV(int slot, uint32_t v);
         void CS_ClearUAV(int slot, glm::vec4 v);
@@ -526,4 +568,5 @@ namespace RA {
     FrameBufferBuilderIntf* FBB(const DevicePtr& dev);
 
     int PixelsSize(TextureFmt fmt);
+    std::filesystem::path ExePath();
 }

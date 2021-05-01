@@ -166,6 +166,7 @@
     <ClInclude Include="includes\RCanvas.h" />
     <ClInclude Include="includes\RFonts.h" />
     <ClInclude Include="includes\RSystems.h" />
+    <ClInclude Include="includes\RWnd.h" />
     <ClInclude Include="stb_image.h" />
     <ClInclude Include="stb_image_bindings.h" />
     <ClInclude Include="includes\RAdopt.h" />
@@ -179,6 +180,7 @@
     <ClCompile Include="RCanvas.cpp" />
     <ClCompile Include="RFonts.cpp" />
     <ClCompile Include="RSystems.cpp" />
+    <ClCompile Include="RWnd.cpp" />
     <ClCompile Include="stb_image_bindings.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

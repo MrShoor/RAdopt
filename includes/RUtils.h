@@ -55,8 +55,10 @@ namespace RA {
         glm::Plane GetFrustumPlane(FrustumPlane fp) const;
         bool IsOrtho() const;
         glm::mat4 View() const;
+        glm::mat4 Proj() const;
         glm::mat4 ViewProj() const;
         glm::mat4 ViewInv() const;
+        glm::mat4 ProjInv() const;
         glm::mat4 ViewProjInv() const;
 
         void SetCamera(const glm::vec3& eye, const glm::vec3& at, const glm::vec3& up);
@@ -93,6 +95,7 @@ namespace RA {
         virtual int Offset() const = 0;
         virtual int Size() const = 0;
         virtual glm::ivec2 OffsetSize() const = 0;
+        virtual ~MemRangeIntf() {};
     };
     using MemRangeIntfPtr = std::unique_ptr<MemRangeIntf>;
     class RangeManagerIntf {
@@ -107,6 +110,49 @@ namespace RA {
     };
     using RangeManagerIntfPtr = std::unique_ptr<RangeManagerIntf>;
     RangeManagerIntfPtr Create_RangeManager(int size);
+
+    class ManagedSBO;
+
+    class ManagedSBO_Range {
+        friend class ManagedSBO;
+    private:
+        ManagedSBO* m_sbo;
+        uint32_t m_idx;
+        MemRangeIntfPtr m_range;
+        std::vector<char> m_data;
+        void UpdateSBOData();
+    public:
+        int Offset() const;
+        int Size() const;
+        void SetData(const void* data);
+        ManagedSBO_Range(ManagedSBO* owner, MemRangeIntfPtr range);
+        ~ManagedSBO_Range();
+    };
+    using ManagedSBO_RangePtr = std::unique_ptr<ManagedSBO_Range>;
+
+    class ManagedSBO {
+        friend class ManagedSBO_Range;
+    private:
+        RangeManagerIntfPtr m_man;
+        StructuredBufferPtr m_buffer;
+        std::vector<ManagedSBO_Range*> m_ranges;
+        bool m_buffer_valid;
+        void ValidateBuffer();
+    public:
+        ManagedSBO_RangePtr Alloc(int vertex_count);
+        StructuredBufferPtr Buffer();
+        ManagedSBO(const DevicePtr& dev, int stride_size);
+    };
+
+    class ManagedTexSlices {
+    private:
+        RangeManagerIntfPtr m_man;
+        Texture2DPtr m_tex;
+    public:
+        MemRangeIntfPtr Alloc(int slices_count, bool* tex_reallocated);
+        Texture2DPtr Texture();
+        ManagedTexSlices(const DevicePtr& dev, TextureFmt fmt, const glm::ivec2& tex_size);
+    };
 
     class QPC {
     private:

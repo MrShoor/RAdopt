@@ -54,6 +54,10 @@ namespace RA {
     {
         return m_buf.view;
     }
+    glm::mat4 Camera::Proj() const
+    {
+        return m_buf.proj;
+    }
     glm::mat4 Camera::ViewProj() const
     {
         return m_buf.view_proj;
@@ -61,6 +65,10 @@ namespace RA {
     glm::mat4 Camera::ViewInv() const
     {
         return m_buf.view_inv;
+    }
+    glm::mat4 Camera::ProjInv() const
+    {
+        return m_buf.proj_inv;
     }
     glm::mat4 Camera::ViewProjInv() const
     {
@@ -235,7 +243,7 @@ namespace RA {
             return m_offset_size;
         }
         MemRange(RangeManager* man, const glm::ivec2& offset_size);
-        ~MemRange();
+        ~MemRange() override;
     };
 
     class RangeManager : public RangeManagerIntf {
@@ -464,5 +472,92 @@ namespace RA {
             m_root->triangles.push_back(i);
         }
         SplitRecursive(m_root.get());
+    }
+    void ManagedSBO::ValidateBuffer()
+    {
+        if (m_buffer_valid) return;
+        m_buffer_valid = true;
+        m_buffer->SetState(m_buffer->Stride(), m_man->Size());
+        for (const auto& r : m_ranges) {
+            r->UpdateSBOData();
+        }
+    }
+    ManagedSBO_RangePtr ManagedSBO::Alloc(int vertex_count)
+    {
+        MemRangeIntfPtr range = m_man->Alloc(vertex_count);
+        if (!range) {            
+            m_man->AddSpace(glm::nextPowerOfTwo(m_man->Size() + vertex_count) - m_man->Size());
+            range = m_man->Alloc(vertex_count);
+            m_buffer_valid = false;
+        }
+        return std::make_unique<ManagedSBO_Range>(this, std::move(range));
+    }
+    StructuredBufferPtr ManagedSBO::Buffer()
+    {
+        ValidateBuffer();
+        return m_buffer;
+    }
+    ManagedSBO::ManagedSBO(const DevicePtr& dev, int stride_size) : m_man(Create_RangeManager(32))
+    {
+        m_buffer = dev->Create_StructuredBuffer();
+        m_buffer->SetState(stride_size, m_man->Size());
+        m_buffer_valid = false;
+    }
+    void ManagedSBO_Range::UpdateSBOData()
+    {
+        if (m_sbo->m_buffer_valid) {
+            m_sbo->m_buffer->SetSubData(m_range->Offset(), m_range->Size(), m_data.data());
+        }
+    }
+    int ManagedSBO_Range::Offset() const
+    {
+        return m_range->Offset();
+    }
+    int ManagedSBO_Range::Size() const
+    {
+        return m_range->Size();
+    }
+    void ManagedSBO_Range::SetData(const void* data)
+    {
+        memcpy(m_data.data(), data, m_data.size());
+        UpdateSBOData();
+    }
+    ManagedSBO_Range::ManagedSBO_Range(ManagedSBO* owner, MemRangeIntfPtr range)
+    {
+        m_sbo = owner;
+        m_idx = int(m_sbo->m_ranges.size());
+        m_sbo->m_ranges.push_back(this);
+        m_range = std::move(range);
+        m_data.resize(size_t(m_range->Size() * m_sbo->m_buffer->Stride()));
+    }
+    ManagedSBO_Range::~ManagedSBO_Range()
+    {
+        m_sbo->m_ranges[m_idx] = m_sbo->m_ranges.back();
+        m_sbo->m_ranges[m_idx]->m_idx = m_idx;
+        m_sbo->m_ranges.pop_back();
+        if (m_idx != m_sbo->m_ranges.size())
+            m_sbo->m_ranges[m_idx]->UpdateSBOData();
+    }
+
+    MemRangeIntfPtr ManagedTexSlices::Alloc(int slices_count, bool* tex_reallocated)
+    {
+        *tex_reallocated = false;
+        MemRangeIntfPtr range = m_man->Alloc(slices_count);
+        if (!range) {
+            m_man->AddSpace(glm::nextPowerOfTwo(m_man->Size() + slices_count));
+            range = m_man->Alloc(slices_count);
+            *tex_reallocated = true;
+        }
+        return range;
+    }
+
+    Texture2DPtr ManagedTexSlices::Texture()
+    {
+        return m_tex;
+    }
+
+    ManagedTexSlices::ManagedTexSlices(const DevicePtr& dev, TextureFmt fmt, const glm::ivec2& tex_size) : m_man(Create_RangeManager(8)) {
+        m_tex = dev->Create_Texture2D();
+        m_tex->SetState(fmt, tex_size, 0, m_man->Size());
     }
 }

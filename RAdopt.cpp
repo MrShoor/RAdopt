@@ -2,6 +2,7 @@
 #include "RAdopt.h"
 #include <cassert>
 #include <fstream>
+#include <sstream>
 #include <d3dcompiler.h>
 #include "DX11TypeConverter.h"
 
@@ -66,6 +67,18 @@ namespace RA {
         default:
             return 0;
         }
+    }
+
+    std::filesystem::path ExePath()
+    {
+        std::vector<wchar_t> pathBuf;
+        DWORD copied = 0;
+        do {
+            pathBuf.resize(pathBuf.size() + MAX_PATH);
+            copied = GetModuleFileNameW(0, &pathBuf.at(0), DWORD(pathBuf.size()));
+        } while (copied >= pathBuf.size());
+        pathBuf.resize(copied);
+        return std::filesystem::path(pathBuf.begin(), pathBuf.end()).parent_path();
     }
 
     class LayoutBuilder : public LayoutBuilderIntf {
@@ -516,7 +529,7 @@ namespace RA {
             nullptr,
             D3D_DRIVER_TYPE_HARDWARE,
             0,
-            D3D11_CREATE_DEVICE_SINGLETHREADED, //| D3D11_CREATE_DEVICE_DEBUG,
+            D3D11_CREATE_DEVICE_SINGLETHREADED | D3D11_CREATE_DEVICE_DEBUG,
             nullptr,
             0,
             D3D11_SDK_VERSION,
@@ -580,6 +593,10 @@ namespace RA {
     {
         return m_states.get();
     }
+    FrameBufferPtr Device::ActiveFrameBuffer() const
+    {
+        return m_active_fbo.lock();
+    }
     Program* Device::ActiveProgram()
     {
         return m_active_program;
@@ -589,6 +606,10 @@ namespace RA {
     }
     Texture2DPtr Device::Create_Texture2D() {
         return std::make_shared<Texture2D>(shared_from_this());
+    }
+    Texture3DPtr Device::Create_Texture3D()
+    {
+        return std::make_shared<Texture3D>(shared_from_this());
     }
     VertexBufferPtr Device::Create_VertexBuffer() {
         return std::make_shared<VertexBuffer>(shared_from_this());
@@ -1136,7 +1157,29 @@ namespace RA {
     void Program::Load(const std::string& name, bool from_resources, const std::string& dir)
     {
         if (from_resources) {
-
+            auto cvt = [](const std::string & s) {
+                std::wstring wsTmp(s.begin(), s.end());
+                return wsTmp;
+            };
+            std::wstring wstr = L"DX_" + cvt(name);
+            HRSRC hResource = FindResource(0, wstr.c_str(), RT_RCDATA);
+            if (hResource) {
+                HGLOBAL hLoadedResource = LoadResource(0, hResource);
+                if (hLoadedResource) {
+                    LPVOID pLockedResource = LockResource(hLoadedResource);
+                    if (pLockedResource) {
+                        DWORD dwResourceSize = SizeofResource(0, hResource);
+                        if (0 != dwResourceSize)
+                        {
+                            std::stringstream ss;
+                            ss.write((const char*)pLockedResource, dwResourceSize);
+                            ss.seekg(0, ss.beg);
+                            Load(ss);
+                        }
+                        FreeResource(pLockedResource);
+                    }
+                }
+            }
         }
         else {
             std::string fullpath = dir + "\\DX_" + name + ".hlsl";
@@ -1221,6 +1264,19 @@ namespace RA {
             }
         }
     }
+    void Program::SetResource(const char* name, const Texture3DPtr& tex)
+    {
+        int idx = FindSlot(name);
+        if (idx < 0) return;
+        ShaderSlot& slot = m_slots[idx];
+        ComPtr<ID3D11ShaderResourceView> srv = tex ? tex->GetShaderResourceView() : nullptr;
+        if ((slot.view ? slot.view.Get() : nullptr) != srv.Get()) {
+            slot.view = std::move(srv);
+            if (IsProgramActive()) {
+                slot.Select(m_device->m_deviceContext.Get());
+            }
+        }
+    }
     void Program::SetResource(const char* name, const Sampler& s)
     {
         int idx = FindSlot(name);
@@ -1284,6 +1340,13 @@ namespace RA {
     void Program::CS_SetUAV(int slot, const Texture2DPtr& tex, int mip, int slice_start, int slice_count)
     {
         ID3D11UnorderedAccessView* view = tex ? tex->GetUnorderedAccessView(mip, slice_start, slice_count).Get() : nullptr;
+        m_views_uav[slot] = view;
+        UINT counter = -1;
+        m_device->m_deviceContext->CSSetUnorderedAccessViews(slot, 1, &view, &counter);
+    }
+    void Program::CS_SetUAV(int slot, const Texture3DPtr& tex, int mip, int z_start, int z_count)
+    {
+        ID3D11UnorderedAccessView* view = tex ? tex->GetUnorderedAccessView(mip, z_start, z_count).Get() : nullptr;
         m_views_uav[slot] = view;
         UINT counter = -1;
         m_device->m_deviceContext->CSSetUnorderedAccessViews(slot, 1, &view, &counter);
@@ -1947,5 +2010,92 @@ namespace RA {
     bool FrameBuffer::Tex2D_params::operator==(const Tex2D_params& b)
     {
         return (mip == b.mip)&&(slice_start == b.slice_start)&&(slice_count == b.slice_count)&&(read_only == b.read_only);
+    }
+    ComPtr<ID3D11ShaderResourceView> Texture3D::GetShaderResourceView()
+    {
+        if (!m_srv) {
+            D3D11_SHADER_RESOURCE_VIEW_DESC desc;
+            desc.ViewDimension = D3D_SRV_DIMENSION_TEXTURE3D;
+            desc.Format = ToDXGI_SRVFmt(m_fmt);
+            desc.Texture3D.MipLevels = m_mips_count;
+            desc.Texture3D.MostDetailedMip = 0;
+            CheckD3DErr(m_device->m_device->CreateShaderResourceView(m_handle.Get(), &desc, &m_srv));
+        }
+        return m_srv;
+    }
+    ComPtr<ID3D11UnorderedAccessView> Texture3D::GetUnorderedAccessView(int mip, int z_start, int z_count)
+    {
+        glm::ivec3 key(mip, z_start, z_count);
+        auto it = m_uav.find(key);
+        if (it == m_uav.end()) {
+            ComPtr<ID3D11UnorderedAccessView> new_view;
+            D3D11_UNORDERED_ACCESS_VIEW_DESC desc;
+            desc.Format = ToDXGI_Fmt(m_fmt);
+            desc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE3D;
+            desc.Texture3D.MipSlice = mip;
+            desc.Texture3D.FirstWSlice = z_start;
+            desc.Texture3D.WSize = z_count;
+            CheckD3DErr(m_device->m_device->CreateUnorderedAccessView(m_handle.Get(), &desc, &new_view));
+            m_uav.insert({ key, new_view });
+            return new_view;
+        }
+        return it->second;
+    }
+    void Texture3D::ClearStoredViews()
+    {
+        m_uav.clear();
+        m_srv = nullptr;
+    }
+    TextureFmt Texture3D::Format() const
+    {
+        return m_fmt;
+    }
+    glm::ivec3 Texture3D::Size() const
+    {
+        return m_size;
+    }
+    int Texture3D::MipsCount() const
+    {
+        return m_mips_count;
+    }
+    void Texture3D::SetState(TextureFmt fmt, glm::ivec3 size, int mip_levels, const void* data)
+    {
+        m_fmt = fmt;
+        m_size = size;
+        m_mips_count = glm::clamp(mip_levels, 1, MipLevelsCount(size.x, size.y, size.z));
+
+        D3D11_TEXTURE3D_DESC desc;
+        desc.Width = m_size.x;
+        desc.Height = m_size.y;
+        desc.Depth = m_size.z;
+        desc.MipLevels = m_mips_count;
+        desc.Format = ToDXGI_Fmt(m_fmt);
+        desc.Usage = D3D11_USAGE_DEFAULT;
+        desc.BindFlags = 0;
+        if (CanBeShaderRes(m_fmt)) desc.BindFlags |= D3D11_BIND_SHADER_RESOURCE;
+        if (CanBeRenderTarget(m_fmt)) desc.BindFlags |= D3D11_BIND_RENDER_TARGET;
+        if (CanBeDepthTarget(m_fmt)) desc.BindFlags |= D3D11_BIND_DEPTH_STENCIL;
+        if (CanBeUAV(m_fmt)) desc.BindFlags |= D3D11_BIND_UNORDERED_ACCESS;
+        desc.CPUAccessFlags = 0;
+        desc.MiscFlags = 0;
+
+        if (data) {
+            D3D11_SUBRESOURCE_DATA d3ddata;
+            d3ddata.pSysMem = data;
+            d3ddata.SysMemPitch = PixelsSize(m_fmt) * m_size.x;
+            d3ddata.SysMemSlicePitch = d3ddata.SysMemPitch * m_size.y;
+            CheckD3DErr(m_device->m_device->CreateTexture3D(&desc, &d3ddata, &m_handle));
+        }
+        else {
+            CheckD3DErr(m_device->m_device->CreateTexture3D(&desc, nullptr, &m_handle));
+        }
+
+        ClearStoredViews();
+    }
+    Texture3D::Texture3D(const DevicePtr& device) : DevChild(device)
+    {
+        m_fmt = TextureFmt::RGBA8;
+        m_size = glm::ivec3(0, 0, 0);
+        m_mips_count = 1;
     }
 }
