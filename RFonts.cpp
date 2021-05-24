@@ -24,7 +24,7 @@ namespace RA {
             callback(s.substr(start_i, s.size() - start_i), 0);
     }
 
-    const char* Altas_GlyphsSDF::ObtainFontPtr(const char* font)
+    const char* Atlas_GlyphsSDF::ObtainFontPtr(const char* font)
     {
         for (const auto& s : m_fonts) {
             if (s == font) {
@@ -34,7 +34,7 @@ namespace RA {
         m_fonts.emplace_back(font);
         return m_fonts.back().c_str();
     }
-    void Altas_GlyphsSDF::ValidateTexture()
+    void Atlas_GlyphsSDF::ValidateTexture()
     {
         if (m_tex->SlicesCount() != m_roots.size())
             m_tex->SetState(m_tex->Format(), m_tex->Size(), 0, int(m_roots.size()), nullptr);
@@ -55,7 +55,7 @@ namespace RA {
         }
         m_gen_glyph_prog->CS_SetUAV(0, nullptr);
     }
-    Altas_GlyphsSDF::Altas_GlyphsSDF(const DevicePtr& dev) : BaseAtlas(dev)
+    Atlas_GlyphsSDF::Atlas_GlyphsSDF(const DevicePtr& dev) : BaseAtlas(dev)
     {
         m_gen_glyph_prog = m_dev->Create_Program();
         m_gen_glyph_prog->Load("generate_sdf_glyph", false, "D:\\Projects\\Beatty\\Beatty\\shaders\\!Out");
@@ -66,7 +66,7 @@ namespace RA {
         m_tex->SetState(TextureFmt::R32f, glm::ivec2(512, 512));
         m_roots.push_back(std::make_unique<Node>(m_tex->Size()));
     }
-    Sprite_GlyphPtr Altas_GlyphsSDF::ObtainSprite(const char* font, wchar_t ch, bool bold, bool italic, bool underline, bool strike)
+    Sprite_GlyphPtr Atlas_GlyphsSDF::ObtainSprite(const char* font, wchar_t ch, bool bold, bool italic, bool underline, bool strike)
     {        
         Glyph_Key k(ObtainFontPtr(font), ch, bold, italic, underline, strike);
         auto it = m_sprites.find(k);
@@ -199,7 +199,7 @@ namespace RA {
         XXX.z = float(gm.gmCellIncX - int(gm.gmBlackBoxX) - gm.gmptGlyphOrigin.x);
 
         for (auto& cntr : poly) {
-            for (int i = 0; i < cntr.size(); i++) {
+            for (int i = 0; i < int(cntr.size()); i++) {
                 cntr[i].x -= XXX.x;
                 cntr[i].y = YYYY.y - cntr[i].y;
             }
@@ -214,7 +214,7 @@ namespace RA {
         YYYY.w = YYYY.w - cSpacing;
 
         for (auto& cntr : poly) {
-            for (int i = 0; i < cntr.size(); i++) {
+            for (int i = 0; i < int(cntr.size()); i++) {
                 cntr[i].x += cSpacing;
                 cntr[i].y += cSpacing;
             }
@@ -289,7 +289,7 @@ namespace RA {
             glm::vec2 yymetrics;
         };
     private:
-        Altas_GlyphsSDF* m_atlas;
+        Atlas_GlyphsSDF* m_atlas;
         std::string m_fontname;
         glm::vec4 m_color;
         float m_font_size;
@@ -337,7 +337,7 @@ namespace RA {
 
         ITextLinesPtr Finish() override;
 
-        DefTextBuilder(Altas_GlyphsSDF* atlas) : 
+        DefTextBuilder(Atlas_GlyphsSDF* atlas) : 
             m_atlas(atlas), 
             m_pos(0, 0),
             m_line_start(0),
@@ -353,7 +353,7 @@ namespace RA {
         {};
     };
 
-    ITextBuilderPtr Create_TextBuilder(Altas_GlyphsSDF* atlas)
+    ITextBuilderPtr Create_TextBuilder(Atlas_GlyphsSDF* atlas)
     {
         return std::make_shared<DefTextBuilder>(atlas);
     }
@@ -470,7 +470,7 @@ namespace RA {
         else {
             if (m_line_yyyy_metrics.size()) {
                 TextGlyphVertex* glyph = &m_glyphs[m_line_start];
-                for (int i = 0; i < m_line_yyyy_metrics.size(); i++) {
+                for (int i = 0; i < int(m_line_yyyy_metrics.size()); i++) {
                     switch (m_line_info.align) {
                         case LineAlign::Left: {
                             glyph->halign = 0;

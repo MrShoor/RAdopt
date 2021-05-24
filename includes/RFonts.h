@@ -37,7 +37,7 @@ namespace RA {
         Glyph_Data(const Glyph_Key& key);
     };
 
-    class Altas_GlyphsSDF : public BaseAtlas {
+    class Atlas_GlyphsSDF : public BaseAtlas {
     protected:
         RA::ProgramPtr m_gen_glyph_prog;
         RA::StructuredBufferPtr m_segments_sbo;
@@ -47,13 +47,13 @@ namespace RA {
         const char* ObtainFontPtr(const char* font);
         void ValidateTexture() override;
     public:
-        Altas_GlyphsSDF(const DevicePtr& dev);
+        Atlas_GlyphsSDF(const DevicePtr& dev);
         Sprite_GlyphPtr ObtainSprite(const char* font, wchar_t ch, bool bold, bool italic, bool underline, bool strike);
     };
-    using Altas_GlyphsSDFPtr = std::shared_ptr<Altas_GlyphsSDF>;
+    using Atlas_GlyphsSDFPtr = std::shared_ptr<Atlas_GlyphsSDF>;
 
     class Sprite_Glyph : public BaseAtlasSprite {
-        friend class Altas_GlyphsSDF;
+        friend class Atlas_GlyphsSDF;
     protected:
         Glyph_Data m_data;
         Sprite_Glyph(BaseAtlas* owner, Glyph_Data data);
@@ -121,5 +121,5 @@ namespace RA {
     };
     using ITextBuilderPtr = std::shared_ptr<ITextBuilder>;
 
-    ITextBuilderPtr Create_TextBuilder(Altas_GlyphsSDF* atlas);
+    ITextBuilderPtr Create_TextBuilder(Atlas_GlyphsSDF* atlas);
 }

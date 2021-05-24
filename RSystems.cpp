@@ -413,11 +413,11 @@ namespace RA {
     }
     void DecalsManager::UpdateDecal(int idx)
     {
-        if (m_sbo->VertexCount() < m_decals.size()) {
+        if (m_sbo->VertexCount() < int(m_decals.size())) {
             AllocateNewSBO();
         }
         else {
-            if (m_sbo->VertexCount() > m_decals.size() * 3) {
+            if (m_sbo->VertexCount() > int(m_decals.size() * 3)) {
                 AllocateNewSBO();
             }
             else {

@@ -164,6 +164,7 @@
     <ClInclude Include="includes\GLMUtils.h" />
     <ClInclude Include="includes\RAtlas.h" />
     <ClInclude Include="includes\RCanvas.h" />
+    <ClInclude Include="includes\RControls.h" />
     <ClInclude Include="includes\RFonts.h" />
     <ClInclude Include="includes\RSystems.h" />
     <ClInclude Include="includes\RWnd.h" />
@@ -178,6 +179,7 @@
     <ClCompile Include="GLMUtils.cpp" />
     <ClCompile Include="RAtlas.cpp" />
     <ClCompile Include="RCanvas.cpp" />
+    <ClCompile Include="RControls.cpp" />
     <ClCompile Include="RFonts.cpp" />
     <ClCompile Include="RSystems.cpp" />
     <ClCompile Include="RWnd.cpp" />
@@ -191,6 +193,9 @@
     <ClCompile Include="RAdopt.cpp" />
     <ClCompile Include="RModels.cpp" />
     <ClCompile Include="RUtils.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="shaders\shaders.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

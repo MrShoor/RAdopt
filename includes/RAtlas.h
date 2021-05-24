@@ -56,7 +56,7 @@ namespace RA {
         BaseAtlas* m_owner;
         int m_idx;
         int m_slice;
-        glm::ivec4 m_rect;
+        glm::ivec4 m_rect; //xy - min coord, zw - rect size
         glm::ivec2 m_size;
         BaseAtlasSprite(BaseAtlas* owner, const glm::ivec2& size);
     public:
@@ -64,7 +64,7 @@ namespace RA {
         int Slice() const;
         glm::ivec2 Pos() const;
         glm::ivec2 Size() const;
-        glm::ivec4 Rect() const;
+        glm::ivec4 Rect() const; //xy - min coord, zw - rect size
         virtual ~BaseAtlasSprite();
     };
 

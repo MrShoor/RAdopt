@@ -57,6 +57,9 @@
     <ClInclude Include="includes\RWnd.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="includes\RControls.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="RAdopt.cpp">
@@ -92,5 +95,13 @@
     <ClCompile Include="RWnd.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="RControls.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="shaders\shaders.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

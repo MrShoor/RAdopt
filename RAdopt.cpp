@@ -1397,6 +1397,11 @@ namespace RA {
         m_layout = layout;
         m_vert_count = vertex_count;
 
+        if (!m_vert_count) {
+            m_handle = nullptr;
+            return;
+        }
+
         D3D11_BUFFER_DESC desc;
         desc.ByteWidth = vertex_count * m_layout->stride;
         desc.Usage = D3D11_USAGE_DEFAULT;
@@ -1435,6 +1440,7 @@ namespace RA {
     }
     ComPtr<ID3D11ShaderResourceView> StructuredBuffer::GetShaderResourceView()
     {
+        if (!m_vert_count) return nullptr;
         if (!m_srv) 
         {
             D3D11_SHADER_RESOURCE_VIEW_DESC desc;
