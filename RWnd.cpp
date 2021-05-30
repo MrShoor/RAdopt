@@ -2,6 +2,19 @@
 #include "RWnd.h"
 
 namespace RA {
+    ShiftState ToShiftState(WPARAM wParam)
+    {
+        ShiftState res;
+        res.ctrl = wParam & MK_CONTROL;
+        res.shift = wParam & MK_SHIFT;
+        res.mouse_btn[0] = wParam & MK_LBUTTON;
+        res.mouse_btn[1] = wParam & MK_RBUTTON;
+        res.mouse_btn[2] = wParam & MK_MBUTTON;
+        res.mouse_btn[3] = wParam & MK_XBUTTON1;
+        res.mouse_btn[4] = wParam & MK_XBUTTON2;
+        return res;
+    }
+
     LRESULT CALLBACK DefWndProc(
         _In_ HWND   hwnd,
         _In_ UINT   uMsg,
@@ -40,43 +53,49 @@ namespace RA {
                 PostQuitMessage(0);
             return 0;
         case WM_LBUTTONDOWN:
-            MouseDown(0, toCoord(lParam), ShiftState(wParam));
+            MouseDown(0, toCoord(lParam), ToShiftState(wParam));
             return 0;
         case WM_RBUTTONDOWN:
-            MouseDown(1, toCoord(lParam), ShiftState(wParam));
+            MouseDown(1, toCoord(lParam), ToShiftState(wParam));
             return 0;
         case WM_MBUTTONDOWN:
-            MouseDown(2, toCoord(lParam), ShiftState(wParam));
+            MouseDown(2, toCoord(lParam), ToShiftState(wParam));
             return 0;
         case WM_XBUTTONDOWN:
-            MouseDown(int(wParam >> 16) + 2, toCoord(lParam), ShiftState(wParam));
+            MouseDown(int(wParam >> 16) + 2, toCoord(lParam), ToShiftState(wParam));
             return 0;
         case WM_LBUTTONUP:
-            MouseUp(0, toCoord(lParam), ShiftState(wParam));
+            MouseUp(0, toCoord(lParam), ToShiftState(wParam));
             return 0;
         case WM_RBUTTONUP:
-            MouseUp(1, toCoord(lParam), ShiftState(wParam));
+            MouseUp(1, toCoord(lParam), ToShiftState(wParam));
             return 0;
         case WM_MBUTTONUP:
-            MouseUp(2, toCoord(lParam), ShiftState(wParam));
+            MouseUp(2, toCoord(lParam), ToShiftState(wParam));
             return 0;
         case WM_XBUTTONUP:
-            MouseUp(int(wParam >> 16) + 2, toCoord(lParam), ShiftState(wParam));
+            MouseUp(int(wParam >> 16) + 2, toCoord(lParam), ToShiftState(wParam));
             return 0;
         case WM_MOUSEMOVE:
-            MouseMove(toCoord(lParam), ShiftState(wParam));
+            MouseMove(toCoord(lParam), ToShiftState(wParam));
             return 0;
         case WM_MOUSEWHEEL:
-            MouseWhell(toCoord(lParam), int(wParam >> 16) / WHEEL_DELTA, ShiftState(wParam));
+            MouseWheel(toCoord(lParam), GET_WHEEL_DELTA_WPARAM(wParam) / WHEEL_DELTA, ToShiftState(wParam));
             return 0;
-        case WM_PAINT:
-            bool processed = false;
-            Paint(&processed);
-            if (processed) {
-                ValidateRect(hwnd, nullptr);
-                return 0;                
+        case WM_PAINT: {
+                bool processed = false;
+                Paint(&processed);
+                if (processed) {
+                    ValidateRect(hwnd, nullptr);
+                    return 0;
+                }
+                break;
             }
-            break;
+        case WM_SIZE:
+            UINT width = LOWORD(lParam);
+            UINT height = HIWORD(lParam);
+            WindowResized(glm::ivec2(width, height));
+            return 0;
         }
         return DefWindowProcW(hwnd, uMsg, wParam, lParam);
     }
@@ -134,10 +153,13 @@ namespace RA {
     void Window::MouseUp(int btn, const glm::ivec2& crd, const ShiftState& ss)
     {
     }
-    void Window::MouseWhell(const glm::ivec2& crd, int delta, const ShiftState& ss)
+    void Window::MouseWheel(const glm::ivec2& crd, int delta, const ShiftState& ss)
     {
     }
     void Window::Paint(bool* processed)
+    {
+    }
+    void Window::WindowResized(const glm::ivec2& new_size)
     {
     }
     RenderWindow::RenderWindow(std::wstring caption, bool isMainWindow) : Window(L"RenderWndClass", caption, isMainWindow)
@@ -159,16 +181,6 @@ namespace RA {
         RenderScene();
         m_device->PresentToWnd();        
     }
-    ShiftState::ShiftState(WPARAM wParam)
-    {
-        ctrl = wParam & MK_CONTROL;
-        shift = wParam & MK_SHIFT;
-        mouse_btn[0] = wParam & MK_LBUTTON;
-        mouse_btn[1] = wParam & MK_RBUTTON;
-        mouse_btn[2] = wParam & MK_MBUTTON;
-        mouse_btn[3] = wParam & MK_XBUTTON1;
-        mouse_btn[4] = wParam & MK_XBUTTON2;
-    }
     void MessageLoop(const std::function<void()> idle_proc)
     {
         MSG msg;
@@ -188,5 +200,56 @@ namespace RA {
             TranslateMessage(&msg);
             DispatchMessageW(&msg);
         }
+    }
+    void UIRenderWindow::MouseMove(const glm::ivec2& crd, const ShiftState& ss)
+    {
+        m_control_global->Process_MouseMove(crd, ss);
+    }
+    void UIRenderWindow::MouseDown(int btn, const glm::ivec2& crd, const ShiftState& ss)
+    {
+        m_control_global->Process_MouseDown(btn, crd, ss);
+    }
+    void UIRenderWindow::MouseUp(int btn, const glm::ivec2& crd, const ShiftState& ss)
+    {
+        m_control_global->Process_MouseUp(btn, crd, ss);
+    }
+    void UIRenderWindow::MouseWheel(const glm::ivec2& crd, int delta, const ShiftState& ss)
+    {
+        m_control_global->Process_MouseWheel(crd, delta, ss);
+    }
+    void UIRenderWindow::WindowResized(const glm::ivec2& new_size)
+    {
+        m_control_global->Root()->SetSize(new_size);
+    }
+    void UIRenderWindow::RenderScene()
+    {
+        RenderWindow::RenderScene();
+
+        RECT rct;
+        GetClientRect(m_device->Window(), &rct);
+        if ((rct.right - rct.left) * (rct.bottom - rct.top) == 0) return;
+
+        m_ui_camera->UpdateFromWnd();
+
+        m_fbo->SetSizeFromWindow();
+        m_device->SetFrameBuffer(m_fbo);
+        m_fbo->Clear(0, { 0,0,0,0 });
+
+        m_control_global->Draw(m_ui_camera.get());
+
+        m_fbo->BlitToDefaultFBO(0);
+    }
+    UIRenderWindow::UIRenderWindow(std::wstring caption, bool isMainWindow) : RenderWindow(caption, isMainWindow)
+    {
+        m_canvas_common = std::make_shared<CanvasCommonObject>(m_device);
+        m_control_global = std::make_unique<ControlGlobal>(m_canvas_common);
+
+        RECT rct;
+        GetClientRect(Handle(), &rct);
+        m_control_global->Root()->SetSize(glm::vec2(rct.right, rct.bottom));
+
+        m_ui_camera = std::make_unique<UICamera>(m_device);
+
+        m_fbo = FBB(m_device)->Color(RA::TextureFmt::RGBA8)->Finish();
     }
 }

@@ -61,7 +61,10 @@ namespace RA {
             glm::vec4 bounds2d;
             float valign;
             TextGlyphVertex3D(const ITextLinesPtr& lines, const TextGlyphVertex& v2d) : 
-                v2d(v2d), bounds2d(lines->GetBounds()), valign(lines->GetVAlign()) {
+                v2d(v2d), valign(lines->GetVAlign()) {
+                glm::vec4 b = lines->GetBounds();
+                b.w -= lines->TotalHeight();
+                bounds2d = b;
             }
         };
         struct TrisVertex {
@@ -115,7 +118,7 @@ namespace RA {
         void PushBatch(BatchKind kind, int size);
     private:
         bool m_prog_was_inited[4];
-        void InitProgram(BatchKind kind, Camera& camera, const glm::mat3& transform_2d);
+        void InitProgram(BatchKind kind, CameraBase& camera, const glm::mat3& transform_2d);
     public:
         glm::vec3 GetPos();
         void SetPos(const glm::vec3& pt);        
@@ -132,6 +135,7 @@ namespace RA {
 
         void AddLine(const glm::vec2& pt1, const glm::vec2& pt2);
         void AddRectangle(const glm::vec4& bounds);
+        void AddFillRect(const glm::vec4& bounds);
 
         ITextBuilder* TB();
         void AddText(const ITextLinesPtr& lines);
@@ -139,8 +143,8 @@ namespace RA {
 
         CanvasBuffers GetBuffers();
 
-        void Render(Camera& camera);
-        void Render(Camera& camera, const glm::mat3& transform_2d);
+        void Render(CameraBase& camera);
+        void Render(CameraBase& camera, const glm::mat3& transform_2d);
 
         Canvas(const DevicePtr& dev, 
                const Atlas_GlyphsSDFPtr& glyphs, 

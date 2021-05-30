@@ -5,39 +5,44 @@
 #include <unordered_set>
 
 namespace RA {
+    Camera::Camera(const DevicePtr& device) : CameraBase(device)
+    {
+        SetCamera(glm::vec3(0, 0, -5), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+        SetProjection(glm::pi<float>() * 0.25f, 1.0f, glm::vec2(0.1, 100.0));
+    }
     glm::Plane Camera::GetFrustumPlane(FrustumPlane fp) const
     {
         glm::vec4 pt[3];
         switch (fp) {
         case (FrustumPlane::Top):
             pt[0] = { -1, 1, m_depth_range.x, 1 };
-            pt[1] = {  1, 1, m_depth_range.x, 1 };
+            pt[1] = { 1, 1, m_depth_range.x, 1 };
             pt[2] = { -1, 1, m_depth_range.y, 1 };
             break;
         case (FrustumPlane::Bottom):
             pt[0] = { -1, -1, m_depth_range.x, 1 };
             pt[1] = { -1, -1, m_depth_range.y, 1 };
-            pt[2] = {  1, -1, m_depth_range.x, 1 };            
+            pt[2] = { 1, -1, m_depth_range.x, 1 };
             break;
         case (FrustumPlane::Left):
-            pt[0] = { -1,  1, m_depth_range.x, 1 };            
+            pt[0] = { -1,  1, m_depth_range.x, 1 };
             pt[1] = { -1,  1, m_depth_range.y, 1 };
             pt[2] = { -1, -1, m_depth_range.x, 1 };
             break;
         case (FrustumPlane::Right):
-            pt[0] = {  1,  1, m_depth_range.x, 1 };
-            pt[1] = {  1, -1, m_depth_range.x, 1 };
-            pt[2] = {  1,  1, m_depth_range.y, 1 };
+            pt[0] = { 1,  1, m_depth_range.x, 1 };
+            pt[1] = { 1, -1, m_depth_range.x, 1 };
+            pt[2] = { 1,  1, m_depth_range.y, 1 };
             break;
         case (FrustumPlane::Near):
             pt[0] = { -1, -1, m_depth_range.x, 1 };
-            pt[1] = {  1,  1, m_depth_range.x, 1 };
+            pt[1] = { 1,  1, m_depth_range.x, 1 };
             pt[2] = { -1,  1, m_depth_range.x, 1 };
             break;
         case (FrustumPlane::Far):
             pt[0] = { -1, -1, m_depth_range.y, 1 };
             pt[1] = { -1,  1, m_depth_range.y, 1 };
-            pt[2] = {  1,  1, m_depth_range.y, 1 };
+            pt[2] = { 1,  1, m_depth_range.y, 1 };
             break;
         }
         for (int i = 0; i < 3; i++) {
@@ -49,38 +54,6 @@ namespace RA {
     bool Camera::IsOrtho() const
     {
         return m_is_ortho;
-    }
-    glm::mat4 Camera::View() const
-    {
-        return m_buf.view;
-    }
-    glm::mat4 Camera::Proj() const
-    {
-        return m_buf.proj;
-    }
-    glm::mat4 Camera::ViewProj() const
-    {
-        return m_buf.view_proj;
-    }
-    glm::mat4 Camera::ViewInv() const
-    {
-        return m_buf.view_inv;
-    }
-    glm::mat4 Camera::ProjInv() const
-    {
-        return m_buf.proj_inv;
-    }
-    glm::mat4 Camera::ViewProjInv() const
-    {
-        return m_buf.view_proj_inv;
-    }
-    Camera::Camera(const DevicePtr& device)
-    {
-        m_ubo = device->Create_UniformBuffer();
-        m_ubo->SetState(LB()->Finish(sizeof(CameraBuf)), 1, nullptr);
-
-        SetCamera(glm::vec3(0, 0, -5), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
-        SetProjection(glm::pi<float>() * 0.25f, 1.0f, glm::vec2(0.1, 100.0));
     }
     void Camera::SetCamera(const glm::vec3& eye, const glm::vec3& at, const glm::vec3& up)
     {
@@ -207,11 +180,6 @@ namespace RA {
     glm::vec3 Camera::ViewDir() const
     {
         return m_at - m_eye;
-    }
-    UniformBufferPtr Camera::GetUBO()
-    {
-        m_ubo->ValidateDynamicData();
-        return m_ubo;
     }
 
     STB_TexManager gvTexManager;
@@ -559,5 +527,58 @@ namespace RA {
     ManagedTexSlices::ManagedTexSlices(const DevicePtr& dev, TextureFmt fmt, const glm::ivec2& tex_size) : m_man(Create_RangeManager(8)) {
         m_tex = dev->Create_Texture2D();
         m_tex->SetState(fmt, tex_size, 0, m_man->Size());
+    }
+    CameraBase::CameraBase(const DevicePtr& device)
+    {
+        m_ubo = device->Create_UniformBuffer();
+        m_ubo->SetState(LB()->Finish(sizeof(CameraBuf)), 1, nullptr);
+    }
+    glm::mat4 CameraBase::View() const
+    {
+        return m_buf.view;
+    }
+    glm::mat4 CameraBase::Proj() const
+    {
+        return m_buf.proj;
+    }
+    glm::mat4 CameraBase::ViewProj() const
+    {
+        return m_buf.view_proj;
+    }
+    glm::mat4 CameraBase::ViewInv() const
+    {
+        return m_buf.view_inv;
+    }
+    glm::mat4 CameraBase::ProjInv() const
+    {
+        return m_buf.proj_inv;
+    }
+    glm::mat4 CameraBase::ViewProjInv() const
+    {
+        return m_buf.view_proj_inv;
+    }
+    UniformBufferPtr CameraBase::GetUBO()
+    {
+        m_ubo->ValidateDynamicData();
+        return m_ubo;
+    }
+    CameraBase::~CameraBase()
+    {
+    }
+    UICamera::UICamera(const DevicePtr& device) : CameraBase(device)
+    {
+
+    }
+    void UICamera::UpdateFromWnd()
+    {
+        RECT rct;        
+        GetClientRect(m_ubo->GetDevice()->Window(), &rct);
+        m_buf.view = glm::mat4(1.0);
+        glm::mat4 ms = glm::scale(glm::vec3(2.0f / rct.right, -2.0f / rct.bottom, 0.0f));
+        m_buf.proj = glm::translate(glm::vec3(-1.f, 1.f, 0.5f)) * ms;
+
+        m_buf.UpdateViewProj();
+
+        m_ubo->SetSubData(0, 1, &m_buf);
     }
 }

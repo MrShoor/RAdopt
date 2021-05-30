@@ -38,7 +38,7 @@ namespace RA {
     {
         if (m_tex->SlicesCount() != m_roots.size())
             m_tex->SetState(m_tex->Format(), m_tex->Size(), 0, int(m_roots.size()), nullptr);
-        m_gen_glyph_prog->CS_SetUAV(0, m_tex, 0, 0, int(m_roots.size()));
+        m_gen_glyph_prog->CS_SetUAV(0, m_tex, 0, 0, int(m_roots.size()), true);
         //m_gen_glyph_prog->CS_ClearUAV(0, glm::vec4(100000000.0));
         for (const auto& it : m_sprites) {
             if (it.second->m_data.segments.size()) {
@@ -58,7 +58,7 @@ namespace RA {
     Atlas_GlyphsSDF::Atlas_GlyphsSDF(const DevicePtr& dev) : BaseAtlas(dev)
     {
         m_gen_glyph_prog = m_dev->Create_Program();
-        m_gen_glyph_prog->Load("generate_sdf_glyph", false, "D:\\Projects\\Beatty\\Beatty\\shaders\\!Out");
+        m_gen_glyph_prog->Load("RAdopt_generate_sdf_glyph");
 
         m_segments_sbo = m_dev->Create_StructuredBuffer();
         
@@ -238,6 +238,7 @@ namespace RA {
     struct LineInfo {
         LineAlign align;
         glm::vec2 yymetrics;
+        float ypos;
         float width;
         glm::ivec2 glyphs;
         std::vector<glm::vec3> xxxmetrics;
@@ -272,7 +273,8 @@ namespace RA {
             m_valign = 0;
             for (const LineInfo& line : m_lines) {
                 m_max_line_width = glm::max(m_max_line_width, line.width);
-                m_total_height += line.yymetrics.x + line.yymetrics.y;
+                //m_total_height += line.yymetrics.x + line.yymetrics.y;
+                m_total_height = glm::max(m_total_height, line.ypos);
             }
             m_bounds = glm::vec4(0, 0, m_max_line_width, m_total_height);
         }
@@ -492,6 +494,7 @@ namespace RA {
                 }
             }
             m_line_info.glyphs.y = int(m_glyphs.size());
+            m_line_info.ypos = m_pos.y + m_line_info.yymetrics.x + m_line_info.yymetrics.y;
             m_lines.push_back(std::move(m_line_info));
             m_line_yyyy_metrics.clear();
 

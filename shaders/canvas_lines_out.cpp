@@ -10,7 +10,7 @@ struct VS_Input {
     uint S_VertexID(vid);
 };
 
-float3x3 transform_2d;
+float4x4 transform_2d;
 float3 pos3d;
 float2 view_pixel_size;
 
@@ -33,7 +33,8 @@ VS_Output VS(VS_Input In) {
     res.pos.xy /= res.pos.w;
     // res.pos.xy += In.coord * view_pixel_size;
     res.pos.xy /= view_pixel_size;
-    res.pos.xy += mul(transform_2d, float3(crd, 1.0)).xy;
+    float2 offset2d = mul(transform_2d, float4(crd, 0.0, 1.0)).xy;
+    res.pos.xy += float2(offset2d.x, -offset2d.y);
     if (In.hinting) res.pos.xy = round(res.pos.xy);    
     res.pos.xy += n * (In.vid % 2) * In.width.x;
     res.pos.xy *= view_pixel_size;

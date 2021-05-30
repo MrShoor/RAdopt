@@ -7,8 +7,9 @@
 namespace RA {
     enum class FrustumPlane {Top, Bottom, Right, Left, Near, Far};
 
-    class Camera {
+    class CameraBase {
     private:
+    protected:
         struct CameraBuf {
             glm::mat4 view;
             glm::mat4 proj;
@@ -24,20 +25,36 @@ namespace RA {
                 proj_inv = glm::inverse(proj);
                 view_proj_inv = glm::inverse(view_proj);
             }
-            CameraBuf() {
-                view = glm::mat4(1);
-                proj = glm::mat4(1);
-                view_proj = glm::mat4(1);
-                view_inv = glm::mat4(1);
-                proj_inv = glm::mat4(1);
-                view_proj_inv = glm::mat4(1);
-                z_near_far = glm::vec2(0.1, 100.0);
+            CameraBuf() :
+                view(1),
+                proj(1),
+                view_proj(1),
+                view_inv(1),
+                proj_inv(1),
+                view_proj_inv(1),
+                z_near_far(0.1, 100.0),
+                dummy(0) {
             }
         };
-    private:
         CameraBuf m_buf;
         UniformBufferPtr m_ubo;
+    public:
+        CameraBase(const DevicePtr& device);
 
+        glm::mat4 View() const;
+        glm::mat4 Proj() const;
+        glm::mat4 ViewProj() const;
+        glm::mat4 ViewInv() const;
+        glm::mat4 ProjInv() const;
+        glm::mat4 ViewProjInv() const;
+
+        UniformBufferPtr GetUBO();
+
+        virtual ~CameraBase();
+    };
+
+    class Camera : public CameraBase {
+    private:
         glm::vec3 m_eye;
         glm::vec3 m_at;
         glm::vec3 m_up;
@@ -54,12 +71,6 @@ namespace RA {
     public:
         glm::Plane GetFrustumPlane(FrustumPlane fp) const;
         bool IsOrtho() const;
-        glm::mat4 View() const;
-        glm::mat4 Proj() const;
-        glm::mat4 ViewProj() const;
-        glm::mat4 ViewInv() const;
-        glm::mat4 ProjInv() const;
-        glm::mat4 ViewProjInv() const;
 
         void SetCamera(const glm::vec3& eye, const glm::vec3& at, const glm::vec3& up);
         void SetProjection(float fov, float aspect, const glm::vec2& near_far, const glm::vec2& depth_range = {1, 0});
@@ -73,9 +84,13 @@ namespace RA {
 
         glm::vec3 Eye() const;
         glm::vec3 At() const;
-        glm::vec3 ViewDir() const;
+        glm::vec3 ViewDir() const;        
+    };
 
-        UniformBufferPtr GetUBO();
+    class UICamera : public CameraBase {
+    public:
+        UICamera(const DevicePtr& device);
+        void UpdateFromWnd();
     };
 
     class TexDataIntf {

@@ -167,6 +167,7 @@
     <ClInclude Include="includes\RControls.h" />
     <ClInclude Include="includes\RFonts.h" />
     <ClInclude Include="includes\RSystems.h" />
+    <ClInclude Include="includes\RTypes.h" />
     <ClInclude Include="includes\RWnd.h" />
     <ClInclude Include="stb_image.h" />
     <ClInclude Include="stb_image_bindings.h" />

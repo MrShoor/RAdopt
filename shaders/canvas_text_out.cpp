@@ -17,11 +17,12 @@ struct TextGlyphVertex3D {
     float valign;
 };
 
-float3x3 transform_2d;
+float4x4 transform_2d;
 float3 pos3d;
 StructuredBuffer<TextGlyphVertex3D> glyphs;
 float2 view_pixel_size;
 Texture2DArray atlas; SamplerState atlasSampler;
+float flipY;
 
 struct VS_Output {
     float4 S_Position(pos);
@@ -32,7 +33,7 @@ struct VS_Output {
 };
 
 static const float2 quad[4] = {{0,0}, {0,1}, {1,0}, {1,1}};
-static const float2 quadUV[4] = {{0,1}, {0,0}, {1,1}, {1,0}};
+static const float2 quadUV[4] = {{0,0}, {0,1}, {1,0}, {1,1}};
 
 VS_Output VS(uint S_VertexID(vid), uint S_InstanceID(iid)) {
     VS_Output res;
@@ -46,7 +47,9 @@ VS_Output VS(uint S_VertexID(vid), uint S_InstanceID(iid)) {
     res.pos = mul(viewproj, float4(pos3d, 1.0));
     res.pos.xy /= res.pos.w;
     res.pos.xy /= view_pixel_size;
-    res.pos.xy += mul(transform_2d, float3((quad[vid] * gv.size - gv.size * 0.5 + float2(aligned_pos.x, -aligned_pos.y)), 1.0)).xy;
+    float2 offset2d = (quad[vid] * gv.size - gv.size * 0.5 + aligned_pos);
+    offset2d = mul(transform_2d, float4(offset2d, 0.0, 1.0)).xy;
+    res.pos.xy += float2(offset2d.x, -offset2d.y);
     res.pos.xy *= view_pixel_size;
     res.pos.xy *= res.pos.w;
 

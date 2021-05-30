@@ -241,7 +241,7 @@ namespace RA {
         ComPtr<ID3D11RenderTargetView> BuildTargetView(int mip, int slice_start, int slice_count) const;
         ComPtr<ID3D11DepthStencilView> BuildDepthStencilView(int mip, int slice_start, int slice_count, bool read_only) const;
         ComPtr<ID3D11ShaderResourceView> GetShaderResourceView(bool as_array, bool as_cubemap);
-        ComPtr<ID3D11UnorderedAccessView> GetUnorderedAccessView(int mip, int slice_start, int slice_count);
+        ComPtr<ID3D11UnorderedAccessView> GetUnorderedAccessView(int mip, int slice_start, int slice_count, bool as_array);
     public:
         TextureFmt Format() const;
         glm::ivec2 Size() const;
@@ -293,8 +293,9 @@ namespace RA {
             int slice_start;
             int slice_count;
             bool read_only;
+            bool as_array;
             Tex2D_params();
-            Tex2D_params(int mip, int slice_start, int slice_count, bool ronly);
+            Tex2D_params(int mip, int slice_start, int slice_count, bool ronly, bool as_array);
             bool operator == (const Tex2D_params& b);
         };
         enum class UAV_slot_kind { empty, tex, buf };
@@ -310,7 +311,7 @@ namespace RA {
                 this->tex = nullptr;
                 this->buf = nullptr;
             }
-            UAV_slot(const Texture2DPtr& tex, int mip = 0, int slice_start = 0, int slice_count = 1) {
+            UAV_slot(const Texture2DPtr& tex, int mip, int slice_start, int slice_count, bool as_array) {
                 kind = UAV_slot_kind::tex;
                 buf = nullptr;
                 this->tex = tex;
@@ -318,6 +319,7 @@ namespace RA {
                 tex_params.read_only = false;
                 tex_params.slice_count = slice_count;
                 tex_params.slice_start = slice_start;
+                tex_params.as_array = as_array;
                 this->initial_counter = -1;
             }
             UAV_slot(const StructuredBufferPtr& buf, int initial_counter) {
@@ -360,7 +362,7 @@ namespace RA {
         Texture2DPtr GetDS() const;
 
         void ClearUAV(int slot, uint32_t v);
-        void SetUAV(int slot, const Texture2DPtr& tex, int mip = 0, int slice_start = 0, int slice_count = 1);
+        void SetUAV(int slot, const Texture2DPtr& tex, int mip = 0, int slice_start = 0, int slice_count = 1, bool as_array = false);
         void SetUAV(int slot, const StructuredBufferPtr& buf, int initial_counter = -1);
 
         void BlitToDefaultFBO(int from_slot);
@@ -540,7 +542,7 @@ namespace RA {
         void DrawIndexed(PrimTopology pt, int index_start = 0, int index_count = -1, int instance_count = -1, int base_vertex = 0, int base_instance = 0);
         void Draw(PrimTopology pt, int vert_start = 0, int vert_count = -1, int instance_count = -1, int base_instance = 0);
         
-        void CS_SetUAV(int slot, const Texture2DPtr& tex, int mip, int slice_start, int slice_count);
+        void CS_SetUAV(int slot, const Texture2DPtr& tex, int mip, int slice_start, int slice_count, bool as_array = false);
         void CS_SetUAV(int slot, const Texture3DPtr& tex, int mip, int z_start, int z_count);
         void CS_SetUAV(int slot, const StructuredBufferPtr& buf, int initial_counter = -1);
         void CS_ClearUAV(int slot, uint32_t v);

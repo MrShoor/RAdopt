@@ -1,12 +1,13 @@
 #pragma once
 #include "RAdopt.h"
 #include "RCanvas.h"
-#include "RWnd.h"
+#include "RTypes.h"
 
 namespace RA {
     class Control;
 
     class ControlGlobal {
+        friend class Control;
     private:
         CanvasCommonObjectPtr m_canvas_common;
 
@@ -15,7 +16,18 @@ namespace RA {
         Control* m_focused;
 
         std::unique_ptr<Control> m_root;
+
+        std::vector<Control*> m_ups_subs;
+
+        uint64_t m_last_time;
+        RA::QPC m_timer;
+
+        Control* UpdateMovedState(const glm::vec2& pt);
+
+        glm::vec2 ConvertEventCoord(Control* ctrl, const glm::vec2& pt);
     public:        
+        DevicePtr Device();
+
         ControlGlobal(const CanvasCommonObjectPtr& canvas_common);
 
         CanvasCommonObjectPtr CanvasCommon();
@@ -26,10 +38,18 @@ namespace RA {
         Control* Captured() const;
         Control* Focused() const;
 
-        void SetCaptured(const Control* ctrl);
-        void SetFocused(const Control* ctrl);
+        void SetCaptured(Control* ctrl);
+        void SetFocused(Control* ctrl);
 
-        void Draw(Camera* camera);
+        void Process_MouseMove(const glm::vec2& pt, const ShiftState& shifts);
+        void Process_MouseWheel(const glm::vec2& pt, int delta, const ShiftState& shifts);
+        void Process_MouseDown(int btn, const glm::vec2& pt, const ShiftState& shifts);
+        void Process_MouseUp(int btn, const glm::vec2& pt, const ShiftState& shifts);
+        void Process_MouseDblClick(int btn, const glm::vec2& pt, const ShiftState& shifts);
+
+        void Draw(CameraBase* camera);
+        void UpdateStates();
+        void UpdateStates(uint64_t dt);
     };
 
     class Control {
@@ -39,6 +59,8 @@ namespace RA {
         Control* m_parent;
         int m_child_idx;
         std::vector<Control*> m_childs;
+    private:
+        int m_ups_idx;
     protected:
         glm::vec2 m_pos;
         glm::vec2 m_size;
@@ -49,28 +71,47 @@ namespace RA {
         bool m_visible;
         bool m_allow_focus;
         bool m_pass_scroll_to_parent;
+        bool m_auto_capture;
 
+        DevicePtr Device();
         ControlGlobal* Global();
     protected:
         virtual void Notify_ChildVisibleChanged(Control* ACurrentChild) {};
 
+        virtual void Notify_RootChanged();
+        virtual void Notify_ParentChanged() {};
         virtual void Notify_ParentSizeChanged() {};
         virtual void Notify_ParentOriginChanged() {};
         virtual void Notify_ParentPosChanged() {};
         virtual void Notify_ParentAngleChanged() {};
+
+        void RedirectToParent_MouseWheel(const glm::vec2& pt, int delta, const ShiftState& shifts);
     protected:
         bool m_valid;
         void Validate();
         void Invalidate();
         virtual void DoValidate() {};
-        virtual void DrawControl(const glm::mat3& transform, Camera* camera);
-        virtual void DrawRecursive(const glm::mat3& parent_transform, Camera* camera);
+        virtual void DrawControl(const glm::mat3& transform, CameraBase* camera);
+        virtual void DrawRecursive(const glm::mat3& parent_transform, CameraBase* camera);
+
+        bool LocalPtInArea(const glm::vec2& pt);
+        void HitTestRecursive(const glm::vec2& local_pt, Control*& hit_control);
+        virtual void HitTestLocal(const glm::vec2& local_pt, Control*& hit_control);
+    protected:
+        void UPSSubscribe();
+        void UPSUnsubscribe();
+        virtual void OnUPS(uint64_t dt);
+    protected:
+        glm::vec2 Space_ParentToLocal(const glm::vec2& pt);
+        glm::vec2 Space_RootControlToLocal(const glm::vec2& pt);
+        glm::vec2 Space_LocalToRootControl(const glm::vec2& pt);
+        glm::vec2 Space_LocalToParent(const glm::vec2& pt);
     protected:
         virtual void Notify_MouseEnter() {};
         virtual void Notify_MouseLeave() {};
         virtual void Notify_MouseMove(const glm::vec2& pt, const ShiftState& shifts) {};
-        virtual void Notify_MouseWheel(const glm::vec2& pt, int delta, const ShiftState& shifts) {};
-        virtual void Notify_MouseDown(int btn, const glm::vec2& pt, const ShiftState& shifts) {};
+        virtual void Notify_MouseWheel(const glm::vec2& pt, int delta, const ShiftState& shifts);
+        virtual void Notify_MouseDown(int btn, const glm::vec2& pt, const ShiftState& shifts);
         virtual void Notify_MouseUp(int btn, const glm::vec2& pt, const ShiftState& shifts) {};
         virtual void Notify_MouseDblClick(int btn, const glm::vec2& pt, const ShiftState& shifts) {};
 
@@ -87,6 +128,7 @@ namespace RA {
 
         virtual void NextTabStop(Control* ACurrentChild) {};
     public:
+        Control* Root();
         Control* Parent() const;
         glm::vec2 Pos() const;
         glm::vec2 Size() const;
@@ -97,6 +139,7 @@ namespace RA {
         bool Visible() const;
         bool AllowFocus() const;
         bool PassScrollToParent() const;
+        bool AutoCapture() const;
 
         void SetParent(Control* parent);
         void SetPos(const glm::vec2& pos);
@@ -108,13 +151,14 @@ namespace RA {
         void SetVisible(bool visible);
         void SetAllowFocus(bool allow_focus);
         void SetPassScrollToParent(bool pass_scroll);
+        void SetAutoCapture(bool auto_capture);
     public:
         glm::mat3 Transform();
         glm::mat3 TransformInv();
         glm::mat3 AbsTransform();
         glm::mat3 AbsTransformInv();
 
-        void Draw(Camera* camera);
+        void Draw(CameraBase* camera);
 
         Control();
         virtual ~Control();
@@ -130,11 +174,16 @@ namespace RA {
         bool m_invalidate_on_focus;
     protected:
         void DoValidate() override;
-        void DrawControl(const glm::mat3& transform, Camera* camera) override;
+        void DrawControl(const glm::mat3& transform, CameraBase* camera) override;
     public:
         Canvas* Canvas();
         bool Moved();
         bool Focused();
+    };
+
+    class RenderControl : public Control {
+    protected:
+    public:
     };
 
     class CustomButton : public CustomControl {
@@ -143,6 +192,8 @@ namespace RA {
         bool m_downed;
         std::wstring m_text;
         std::function<void(Control*)> m_onclick;
+    protected:
+        void HitTestLocal(const glm::vec2& local_pt, Control*& hit_control) override;
     public:
         bool Downed() const;
         std::wstring Text() const;

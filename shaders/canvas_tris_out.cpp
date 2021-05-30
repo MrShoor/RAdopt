@@ -17,19 +17,27 @@ struct AtlasSprite {
 StructuredBuffer<AtlasSprite> sprites_data;
 Texture2DArray atlas; SamplerState atlasSampler;
 
-float3x3 transform_2d;
+float4x4 transform_2d;
 float3 pos3d;
 float2 view_pixel_size;
 
 struct VS_Output {
     float4 S_Position(pos);
     float2 S_(uv);
-    int S_(slice_idx);
+    nointerpolation int S_(slice_idx);
     float4 S_(color);
 };
 
-VS_Output VS(VS_Input In) {
-    AtlasSprite sprite = sprites_data[In.sprite_idx];
+VS_Output VS(VS_Input In) {    
+    AtlasSprite sprite;
+    
+    if (In.sprite_idx != 0xffffffff) {
+        sprite = sprites_data[In.sprite_idx];
+    } else {
+        sprite.slice = -1;
+        sprite.size = 1;
+        sprite.xy = 0;
+    }
 
     VS_Output res;    
     res.color = In.color;
@@ -38,7 +46,8 @@ VS_Output VS(VS_Input In) {
     res.pos = mul(viewproj, float4(pos3d, 1.0));
     res.pos.xy /= res.pos.w;
     res.pos.xy /= view_pixel_size;
-    res.pos.xy += mul(transform_2d, float3(In.coord, 1.0)).xy;
+    float2 offset2d = mul(transform_2d, float4(In.coord.x, In.coord.y, 0.0, 1.0)).xy;
+    res.pos.xy += float2(offset2d.x, -offset2d.y);
     if (In.hinting) res.pos.xy = round(res.pos.xy);
     res.pos.xy *= view_pixel_size;
     res.pos.xy *= res.pos.w;
@@ -59,6 +68,8 @@ struct PS_Output {
 
 PS_Output PS(VS_Output In) {
     PS_Output res;
-    res.color = atlas.Sample(atlasSampler, float3(In.uv, In.slice_idx)) * In.color;
+    res.color = In.color;
+    if (In.slice_idx > 0)
+        res.color *= atlas.Sample(atlasSampler, float3(In.uv, In.slice_idx));
     return res;
 }

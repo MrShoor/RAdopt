@@ -735,7 +735,7 @@ namespace RA {
         }
         return m_srv[srv_idx];
     }
-    ComPtr<ID3D11UnorderedAccessView> Texture2D::GetUnorderedAccessView(int mip, int slice_start, int slice_count)
+    ComPtr<ID3D11UnorderedAccessView> Texture2D::GetUnorderedAccessView(int mip, int slice_start, int slice_count, bool as_array)
     {
         glm::ivec3 key(mip, slice_start, slice_count);
         auto it = m_uav.find(key);
@@ -743,8 +743,9 @@ namespace RA {
             ComPtr<ID3D11UnorderedAccessView> new_view;
             D3D11_UNORDERED_ACCESS_VIEW_DESC desc;
             desc.Format = ToDXGI_Fmt(m_fmt);
-            desc.ViewDimension = slice_count > 1 ? D3D11_UAV_DIMENSION_TEXTURE2DARRAY : D3D11_UAV_DIMENSION_TEXTURE2D;
-            if (slice_count > 1) {
+            bool is_array = (slice_count > 1) || as_array;
+            desc.ViewDimension = is_array ? D3D11_UAV_DIMENSION_TEXTURE2DARRAY : D3D11_UAV_DIMENSION_TEXTURE2D;
+            if (is_array) {
                 desc.Texture2DArray.MipSlice = mip;
                 desc.Texture2DArray.FirstArraySlice = slice_start;
                 desc.Texture2DArray.ArraySize = slice_count;
@@ -1337,9 +1338,9 @@ namespace RA {
             m_device->m_deviceContext->Draw(vert_count, vert_start);
         }
     }
-    void Program::CS_SetUAV(int slot, const Texture2DPtr& tex, int mip, int slice_start, int slice_count)
+    void Program::CS_SetUAV(int slot, const Texture2DPtr& tex, int mip, int slice_start, int slice_count, bool as_array)
     {
-        ID3D11UnorderedAccessView* view = tex ? tex->GetUnorderedAccessView(mip, slice_start, slice_count).Get() : nullptr;
+        ID3D11UnorderedAccessView* view = tex ? tex->GetUnorderedAccessView(mip, slice_start, slice_count, as_array).Get() : nullptr;
         m_views_uav[slot] = view;
         UINT counter = -1;
         m_device->m_deviceContext->CSSetUnorderedAccessViews(slot, 1, &view, &counter);
@@ -1855,7 +1856,7 @@ namespace RA {
             for (int i = m_rtv_count; i < D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT + D3D11_PS_CS_UAV_REGISTER_COUNT; i++) {
                 switch (m_uav[i].kind) {
                 case (UAV_slot_kind::tex):
-                    m_uav_to_bind.push_back(m_uav[i].tex->GetUnorderedAccessView(m_uav[i].tex_params.mip, m_uav[i].tex_params.slice_start, m_uav[i].tex_params.slice_count).Get());
+                    m_uav_to_bind.push_back(m_uav[i].tex->GetUnorderedAccessView(m_uav[i].tex_params.mip, m_uav[i].tex_params.slice_start, m_uav[i].tex_params.slice_count, m_uav[i].tex_params.as_array).Get());
                     m_uav_initial_counts.push_back(m_uav[i].initial_counter);
                     break;
                 case (UAV_slot_kind::buf):
@@ -1927,7 +1928,7 @@ namespace RA {
             m_colors_to_bind_dirty = true;
             m_colors_to_bind.clear();
         }
-        Tex2D_params new_params(mip, slice_start, slice_count, false);
+        Tex2D_params new_params(mip, slice_start, slice_count, false, false);
         if (!(m_tex_params[slot] == new_params)) {
             m_tex_params[slot] = new_params;
             m_color_views[slot] = nullptr;
@@ -1941,7 +1942,7 @@ namespace RA {
             m_depth = tex;
             m_depth_view = nullptr;
         }
-        Tex2D_params new_params(mip, slice_start, slice_count, readonly);
+        Tex2D_params new_params(mip, slice_start, slice_count, readonly, false);
         if (!(m_depth_params == new_params)) {
             m_depth_params = new_params;
             m_depth_view = nullptr;
@@ -1960,11 +1961,11 @@ namespace RA {
         UINT clear_value[4] = { v,v,v,v };
         m_device->m_deviceContext->ClearUnorderedAccessViewUint(m_uav_to_bind[slot], clear_value);
     }
-    void FrameBuffer::SetUAV(int slot, const Texture2DPtr& tex, int mip, int slice_start, int slice_count)
+    void FrameBuffer::SetUAV(int slot, const Texture2DPtr& tex, int mip, int slice_start, int slice_count, bool as_array)
     {
         m_uav_to_bind_count = -1;
         m_uav_to_bind.clear();
-        m_uav[slot] = UAV_slot(tex, mip, slice_start, slice_count);
+        m_uav[slot] = UAV_slot(tex, mip, slice_start, slice_count, as_array);
     }
     void FrameBuffer::SetUAV(int slot, const StructuredBufferPtr& buf, int initial_counter)
     {
@@ -2006,12 +2007,13 @@ namespace RA {
         slice_count = 0;
         read_only = false;
     }
-    FrameBuffer::Tex2D_params::Tex2D_params(int m, int s_start, int s_count, bool ronly)
+    FrameBuffer::Tex2D_params::Tex2D_params(int m, int s_start, int s_count, bool ronly, bool as_array)
     {
         mip = m;
         slice_start = s_start;
         slice_count = s_count;
         read_only = ronly;
+        this->as_array = as_array;
     }
     bool FrameBuffer::Tex2D_params::operator==(const Tex2D_params& b)
     {

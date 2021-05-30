@@ -1,5 +1,8 @@
 #pragma once
 #include "RAdopt.h"
+#include "RTypes.h"
+#include "RControls.h"
+#include "RUtils.h"
 
 #define NOMINMAX
 #include <Windows.h>
@@ -8,13 +11,6 @@
 
 namespace RA {
     using WndProcCallback = std::function<LRESULT(UINT, WPARAM, LPARAM)>;
-
-    struct ShiftState {
-        bool ctrl;
-        bool shift;
-        bool mouse_btn[5];
-        ShiftState(WPARAM wParam);
-    };
 
     class Window {
     private:
@@ -32,8 +28,9 @@ namespace RA {
         virtual void MouseMove(const glm::ivec2& crd, const ShiftState& ss);
         virtual void MouseDown(int btn, const glm::ivec2& crd, const ShiftState& ss);
         virtual void MouseUp(int btn, const glm::ivec2& crd, const ShiftState& ss);
-        virtual void MouseWhell(const glm::ivec2& crd, int delta, const ShiftState& ss);
+        virtual void MouseWheel(const glm::ivec2& crd, int delta, const ShiftState& ss);
         virtual void Paint(bool* processed);
+        virtual void WindowResized(const glm::ivec2& new_size);
         virtual LRESULT WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
     };
 
@@ -45,6 +42,22 @@ namespace RA {
         RenderWindow(std::wstring caption, bool isMainWindow);
         virtual void RenderScene();
         void Paint(bool* processed) override;
+    };
+
+    class UIRenderWindow : public RenderWindow {
+    protected:
+        std::unique_ptr<UICamera> m_ui_camera;
+        CanvasCommonObjectPtr m_canvas_common;
+        std::unique_ptr<ControlGlobal> m_control_global;
+        RA::FrameBufferPtr m_fbo;
+    public:
+        void MouseMove(const glm::ivec2& crd, const ShiftState& ss) override;
+        void MouseDown(int btn, const glm::ivec2& crd, const ShiftState& ss) override;
+        void MouseUp(int btn, const glm::ivec2& crd, const ShiftState& ss) override;
+        void MouseWheel(const glm::ivec2& crd, int delta, const ShiftState& ss) override;
+        void WindowResized(const glm::ivec2& new_size) override;
+        void RenderScene() override;
+        UIRenderWindow(std::wstring caption, bool isMainWindow);
     };
 
     void MessageLoop(const std::function<void()> idle_proc);

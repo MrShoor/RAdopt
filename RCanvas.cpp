@@ -49,19 +49,24 @@ namespace RA {
             m_batches.back().ranges.y += size;
         }
     }
-    void Canvas::InitProgram(BatchKind kind, Camera& camera, const glm::mat3& transform_2d)
+    void Canvas::InitProgram(BatchKind kind, CameraBase& camera, const glm::mat3& transform_2d)
     {
         if (m_prog_was_inited[int(kind)]) return;
         m_prog_was_inited[int(kind)] = true;
 
         glm::vec2 view_pixel_size = glm::vec2(2.0f) / glm::vec2(m_dev->ActiveFrameBuffer()->GetSize());
+        glm::mat4 m4;
+        m4[0] = glm::vec4(transform_2d[0].x, transform_2d[0].y, 0.0, 0.0);
+        m4[1] = glm::vec4(transform_2d[1].x, transform_2d[1].y, 0.0, 0.0);
+        m4[2] = glm::vec4(0.0, 0.0, 1.0, 0.0);
+        m4[3] = glm::vec4(transform_2d[2].x, transform_2d[2].y, 0.0, 1.0);
 
         switch (kind) {
         case BatchKind::Tris: {
             m_tris_out_prog->SetResource("camera", camera.GetUBO());
             m_tris_out_prog->SetValue("view_pixel_size", view_pixel_size);
             m_tris_out_prog->SetValue("pos3d", m_pos);
-            m_tris_out_prog->SetValue("transform_2d", transform_2d);
+            m_tris_out_prog->SetValue("transform_2d", m4);
             m_tris_out_prog->SetResource("sprites_data", m_sprite_atlas->GlyphsSBO());
             m_tris_out_prog->SetResource("atlas", m_sprite_atlas->Texture());
             m_tris_out_prog->SetResource("atlasSampler", RA::cSampler_Linear);
@@ -72,7 +77,7 @@ namespace RA {
             m_text_out_prog->SetResource("camera", camera.GetUBO());
             m_text_out_prog->SetValue("view_pixel_size", view_pixel_size);
             m_text_out_prog->SetValue("pos3d", m_pos);
-            m_text_out_prog->SetValue("transform_2d", transform_2d);
+            m_text_out_prog->SetValue("transform_2d", m4);
             m_text_out_prog->SetResource("glyphs", m_text_buf);
             m_text_out_prog->SetResource("atlas", m_glyphs_atlas->Texture());
             m_text_out_prog->SetResource("atlasSampler", RA::cSampler_Linear);
@@ -82,7 +87,7 @@ namespace RA {
             m_lines_out_prog->SetResource("camera", camera.GetUBO());
             m_lines_out_prog->SetValue("view_pixel_size", view_pixel_size);
             m_lines_out_prog->SetValue("pos3d", m_pos);
-            m_lines_out_prog->SetValue("transform_2d", transform_2d);
+            m_lines_out_prog->SetValue("transform_2d", m4);
             m_lines_out_prog->SetInputBuffers(nullptr, nullptr, m_lines_buf);
             break;
         }
@@ -132,10 +137,10 @@ namespace RA {
         float u2 = float(sprite_cliprect.x + sprite_cliprect.z) / rct.z;
         float v1 = float(sprite_cliprect.y) / rct.w;
         float v2 = float(sprite_cliprect.y + sprite_cliprect.w) / rct.w;
-        v[0].texcoord = glm::vec2(u1, v2);
-        v[1].texcoord = glm::vec2(u1, v1);
-        v[2].texcoord = glm::vec2(u2, v2);
-        v[3].texcoord = glm::vec2(u2, v1);
+        v[0].texcoord = glm::vec2(u1, v1);
+        v[1].texcoord = glm::vec2(u1, v2);
+        v[2].texcoord = glm::vec2(u2, v1);
+        v[3].texcoord = glm::vec2(u2, v2);
 
         m_tris.push_back(v[0]);
         m_tris.push_back(v[1]);
@@ -197,10 +202,10 @@ namespace RA {
         p[2] = { bounds.z, bounds.w };
         p[3] = { bounds.x, bounds.w };
         glm::vec2 np[4];
-        np[0] = { n.x, n.y };
-        np[1] = { -n.x, n.y };
-        np[2] = { -n.x, -n.y };
-        np[3] = { n.x, -n.y };
+        np[0] = { n.x, -n.y };
+        np[1] = { -n.x, -n.y };
+        np[2] = { -n.x, n.y };
+        np[3] = { n.x, n.y };
 
         for (int i = 0; i < 4; i++) {
             v.coords = { p[i], p[(i + 1) % 4] };
@@ -209,6 +214,39 @@ namespace RA {
         }
         m_lines_buf_valid = false;
         PushBatch(BatchKind::Lines, 4);
+    }
+    void Canvas::AddFillRect(const glm::vec4& bounds)
+    {
+        TrisVertex v[4];
+
+        float x1 = bounds.x;
+        float x2 = bounds.z;
+        float y1 = bounds.y;
+        float y2 = bounds.w;
+        v[0].coord = glm::vec2(x1, y1);
+        v[1].coord = glm::vec2(x1, y2);
+        v[2].coord = glm::vec2(x2, y1);
+        v[3].coord = glm::vec2(x2, y2);
+        for (int i = 0; i < 4; i++) {
+            v[i].color = m_pen.GetColor();
+            v[i].hinting = m_pen.GetHinting() ? 1.0f : 0.0f;
+            v[i].sprite_idx = -1;
+        }
+
+        v[0].texcoord = glm::vec2(0, 0);
+        v[1].texcoord = glm::vec2(0, 0);
+        v[2].texcoord = glm::vec2(0, 0);
+        v[3].texcoord = glm::vec2(0, 0);
+
+        m_tris.push_back(v[0]);
+        m_tris.push_back(v[1]);
+        m_tris.push_back(v[2]);
+        m_tris.push_back(v[2]);
+        m_tris.push_back(v[1]);
+        m_tris.push_back(v[3]);
+        m_tris_buf_valid = false;
+
+        PushBatch(BatchKind::Tris, 6);
     }
     void Canvas::AddText(const ITextLinesPtr& lines)
     {
@@ -242,7 +280,7 @@ namespace RA {
         res.tris_buf = m_tris_buf->VertexCount() ? &m_tris_buf : nullptr;
         return res;
     }
-    void Canvas::Render(Camera& camera, const glm::mat3& transform_2d)
+    void Canvas::Render(CameraBase& camera, const glm::mat3& transform_2d)
     {
         ValidateBuffers();
 
@@ -271,7 +309,7 @@ namespace RA {
             }
         }
     }
-    void Canvas::Render(Camera& camera)
+    void Canvas::Render(CameraBase& camera)
     {
         Render(camera, glm::mat3(1.0f));
     }
@@ -286,7 +324,8 @@ namespace RA {
         m_sprite_atlas(sprites),
         m_tris_out_prog(tris_out_prog),
         m_text_out_prog(text_out_prog),
-        m_lines_out_prog(lines_out_prog)
+        m_lines_out_prog(lines_out_prog),
+        m_pos(0)
     {
         m_dev = dev;
 

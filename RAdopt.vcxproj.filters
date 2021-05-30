@@ -60,6 +60,9 @@
     <ClInclude Include="includes\RControls.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="includes\RTypes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="RAdopt.cpp">
