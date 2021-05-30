@@ -1163,7 +1163,7 @@ namespace RA {
                 return wsTmp;
             };
             std::wstring wstr = L"DX_" + cvt(name);
-            HRSRC hResource = FindResource(0, wstr.c_str(), RT_RCDATA);
+            HRSRC hResource = FindResourceW(0, wstr.c_str(), RT_RCDATA);
             if (hResource) {
                 HGLOBAL hLoadedResource = LoadResource(0, hResource);
                 if (hLoadedResource) {

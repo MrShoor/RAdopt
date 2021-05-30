@@ -196,7 +196,7 @@
     <ClCompile Include="RUtils.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="shaders\shaders.rc" />
+    <ResourceCompile Include="..\..\RAdopt\shaders\RAdopt_shaders.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

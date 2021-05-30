@@ -1,0 +1,4 @@
+DX_RAdopt_canvas_text_out RCDATA "!Out\DX_RAdopt_canvas_text_out.hlsl"
+DX_RAdopt_canvas_tris_out RCDATA "!Out\DX_RAdopt_canvas_tris_out.hlsl"
+DX_RAdopt_canvas_lines_out RCDATA "!Out\DX_RAdopt_canvas_lines_out.hlsl"
+DX_RAdopt_generate_sdf_glyph RCDATA "!Out\DX_RAdopt_generate_sdf_glyph.hlsl"

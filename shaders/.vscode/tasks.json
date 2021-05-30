@@ -6,7 +6,7 @@
             "command": "apcc",
             "type": "process",
             "args": [
-                "shaders.json"
+                "RAdopt_shaders.json"
             ],
             "options": {
                 "cwd": "${workspaceFolder}"
