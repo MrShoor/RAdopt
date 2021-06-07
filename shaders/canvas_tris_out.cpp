@@ -69,7 +69,7 @@ struct PS_Output {
 PS_Output PS(VS_Output In) {
     PS_Output res;
     res.color = In.color;
-    if (In.slice_idx > 0)
+    if (In.slice_idx >= 0)
         res.color *= atlas.Sample(atlasSampler, float3(In.uv, In.slice_idx));
     return res;
 }

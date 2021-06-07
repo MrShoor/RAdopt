@@ -275,7 +275,7 @@ namespace RA {
     glm::mat3 Control::Transform()
     {
         glm::mat3 to_origin(1.0f);
-        to_origin[2] = glm::vec3(m_size * m_origin, 1.0);
+        to_origin[2] = glm::vec3(-m_size * m_origin, 1.0);
         
         float sn = glm::sin(m_angle);
         float cs = glm::cos(m_angle);
@@ -307,7 +307,22 @@ namespace RA {
     {
         DrawRecursive(glm::mat3(1.0f), camera);
     }
-    Control::Control() : m_visible(true), m_ups_idx(-1), m_auto_capture(true)
+    Control::Control() : 
+        m_visible(true), 
+        m_ups_idx(-1), 
+        m_auto_capture(true), 
+        m_parent(nullptr),
+        m_cglobal(nullptr),
+        m_child_idx(-1),
+        m_pos(0,0),
+        m_size(0,0),
+        m_origin(0,0),
+        m_angle(0),
+        m_tab_idx(0),
+        m_dragthreshold(5),
+        m_allow_focus(false),
+        m_pass_scroll_to_parent(false),
+        m_valid(false)
     {
     }
     Control::~Control()

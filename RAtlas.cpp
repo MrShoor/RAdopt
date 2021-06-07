@@ -156,7 +156,7 @@ namespace RA {
     }
     AtlasSpritePtr Atlas::ObtainSprite(const fs::path& filename)
     {
-        TexDataIntf* tex = TM()->Load(filename);
+        TexDataIntf* tex = TM()->Load(filename);        
         auto it = m_data.find(tex);
         if (it == m_data.end()) {
             AtlasSpritePtr new_sprite(new AtlasSprite(this, tex));
