@@ -90,7 +90,7 @@ namespace RA {
     glm::vec2 Control::Space_ParentToLocal(const glm::vec2& pt)
     {
         if (m_parent) {
-            glm::mat3 transform = m_parent->TransformInv();
+            glm::mat3 transform = TransformInv();
             return (transform * glm::vec3(pt, 1.0f)).xy();
         }
         else {
@@ -121,7 +121,7 @@ namespace RA {
     glm::vec2 Control::Space_LocalToParent(const glm::vec2& pt)
     {
         if (m_parent) {
-            glm::mat3 t = m_parent->Transform();
+            glm::mat3 t = Transform();
             return (t * glm::vec3(pt, 1.0f)).xy();
         }
         else {
@@ -139,6 +139,10 @@ namespace RA {
             Global()->SetCaptured(this);
         }
     }
+    const std::string& Control::Name() const
+    {
+        return m_name;
+    }
     Control* Control::Root()
     {
         return (m_parent) ? m_parent->Root() : this;
@@ -146,6 +150,10 @@ namespace RA {
     Control* Control::Parent() const
     {
         return m_parent;
+    }
+    void Control::SetName(std::string name)
+    {
+        m_name = std::move(name);
     }
     void Control::SetParent(Control* parent)
     {
@@ -252,6 +260,12 @@ namespace RA {
     {
         return m_auto_capture;
     }
+    bool Control::Focused()
+    {
+        auto g = Global();
+        if (!g) return false;
+        return g->Focused() == this;
+    }
     void Control::SetDragThreshold(float drag_threshold)
     {
         m_dragthreshold = drag_threshold;
@@ -271,6 +285,12 @@ namespace RA {
     void Control::SetAutoCapture(bool auto_capture)
     {
         m_auto_capture = auto_capture;
+    }
+    void Control::SetFocus()
+    {
+        auto g = Global();
+        if (g)
+            g->SetFocused(this);
     }
     glm::mat3 Control::Transform()
     {
@@ -477,6 +497,16 @@ namespace RA {
     {
         Control* m = UpdateMovedState(pt);
         if (m) m->Notify_MouseDblClick(btn, ConvertEventCoord(m, pt), shifts);
+    }
+    void ControlGlobal::Process_KeyDown(uint32_t vKey, bool duplicate)
+    {
+        if (!m_focused) return;
+        m_focused->Notify_KeyDown(vKey, duplicate);
+    }
+    void ControlGlobal::Process_KeyUp(uint32_t vKey, bool duplicate)
+    {
+        if (!m_focused) return;
+        m_focused->Notify_KeyUp(vKey, duplicate);
     }
     void ControlGlobal::Draw(CameraBase* camera)
     {

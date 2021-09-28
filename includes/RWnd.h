@@ -29,6 +29,9 @@ namespace RA {
         virtual void MouseDown(int btn, const glm::ivec2& crd, const ShiftState& ss);
         virtual void MouseUp(int btn, const glm::ivec2& crd, const ShiftState& ss);
         virtual void MouseWheel(const glm::ivec2& crd, int delta, const ShiftState& ss);
+        virtual void MouseDblClick(int btn, const glm::ivec2& crd, const ShiftState& ss);
+        virtual void KeyDown(uint32_t vKey, bool duplicate);
+        virtual void KeyUp(uint32_t vKey, bool duplicate);
         virtual void Paint(bool* processed);
         virtual void WindowResized(const glm::ivec2& new_size);
         virtual LRESULT WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
@@ -39,6 +42,8 @@ namespace RA {
     protected:
         DevicePtr m_device;
     public:
+        const DevicePtr& GetDevice() const;
+
         RenderWindow(std::wstring caption, bool isMainWindow);
         virtual void RenderScene();
         void Paint(bool* processed) override;
@@ -50,11 +55,17 @@ namespace RA {
         CanvasCommonObjectPtr m_canvas_common;
         std::unique_ptr<ControlGlobal> m_control_global;
         RA::FrameBufferPtr m_fbo;
+
+        virtual void ControlsDraw_After();
+        virtual void ControlsDraw_Before();        
     public:
         void MouseMove(const glm::ivec2& crd, const ShiftState& ss) override;
         void MouseDown(int btn, const glm::ivec2& crd, const ShiftState& ss) override;
         void MouseUp(int btn, const glm::ivec2& crd, const ShiftState& ss) override;
         void MouseWheel(const glm::ivec2& crd, int delta, const ShiftState& ss) override;
+        void MouseDblClick(int btn, const glm::ivec2& crd, const ShiftState& ss) override;
+        void KeyDown(uint32_t vKey, bool duplicate) override;
+        void KeyUp(uint32_t vKey, bool duplicate) override;
         void WindowResized(const glm::ivec2& new_size) override;
         void RenderScene() override;
         UIRenderWindow(std::wstring caption, bool isMainWindow);

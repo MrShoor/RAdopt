@@ -63,6 +63,9 @@
     <ClInclude Include="includes\RTypes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="RAdoptConsts.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="RAdopt.cpp">
@@ -103,7 +106,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="..\..\RAdopt\shaders\RAdopt_shaders.rc">
+    <ResourceCompile Include="shaders\RAdopt_shaders.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>

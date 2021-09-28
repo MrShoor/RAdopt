@@ -192,6 +192,9 @@ namespace RA {
         FrameBufferPtr SetFrameBuffer(const FrameBufferPtr& fbo, bool update_viewport = true);
         glm::ivec2 CurrentFrameBufferSize() const;
 
+        ID3D11Device* _DX11_Device() const;
+        ID3D11DeviceContext* _DX11_DeviceContext() const;
+
         States* States();
 
         FrameBufferPtr ActiveFrameBuffer() const;
@@ -228,13 +231,18 @@ namespace RA {
                 return std::hash<int>()(v.x) ^ std::hash<int>()(v.y) ^ std::hash<int>()(v.z);
             }
         };
+        struct ivec2_hasher {
+            std::size_t operator() (const glm::ivec2& v) const {
+                return std::hash<int>()(v.x) ^ std::hash<int>()(v.y);
+            }
+        };
     private:
         TextureFmt m_fmt;
         glm::ivec2 m_size;
         int m_slices;
         int m_mips_count;
         ComPtr<ID3D11Texture2D> m_handle;
-        ComPtr<ID3D11ShaderResourceView> m_srv[4];
+        ComPtr<ID3D11ShaderResourceView> m_srv[4];       
 
         std::unordered_map<glm::ivec3, ComPtr<ID3D11UnorderedAccessView>, ivec3_hasher> m_uav;
 
@@ -242,7 +250,11 @@ namespace RA {
         ComPtr<ID3D11DepthStencilView> BuildDepthStencilView(int mip, int slice_start, int slice_count, bool read_only) const;
         ComPtr<ID3D11ShaderResourceView> GetShaderResourceView(bool as_array, bool as_cubemap);
         ComPtr<ID3D11UnorderedAccessView> GetUnorderedAccessView(int mip, int slice_start, int slice_count, bool as_array);
+
+        void ClearResViews();
     public:
+        ID3D11ShaderResourceView* _GetShaderResView(bool as_array, bool as_cubemap);
+
         TextureFmt Format() const;
         glm::ivec2 Size() const;
         int SlicesCount() const;

@@ -47,6 +47,9 @@ namespace RA {
         void Process_MouseUp(int btn, const glm::vec2& pt, const ShiftState& shifts);
         void Process_MouseDblClick(int btn, const glm::vec2& pt, const ShiftState& shifts);
 
+        void Process_KeyDown(uint32_t vKey, bool duplicate);
+        void Process_KeyUp(uint32_t vKey, bool duplicate);
+
         void Draw(CameraBase* camera);
         void UpdateStates();
         void UpdateStates(uint64_t dt);
@@ -62,6 +65,7 @@ namespace RA {
     private:
         int m_ups_idx;
     protected:
+        std::string m_name;
         glm::vec2 m_pos;
         glm::vec2 m_size;
         glm::vec2 m_origin;
@@ -122,12 +126,14 @@ namespace RA {
         virtual void Notify_FocusSet() {};
         virtual void Notify_FocusLost() {};
 
-        virtual void Notify_KeyDown() {};
+        virtual void Notify_KeyDown(uint32_t vKey, bool duplicate) {};
         virtual void Notify_Char() {};
-        virtual void Notify_KeyUp() {};
+        virtual void Notify_KeyUp(uint32_t vKey, bool duplicate) {};
 
         virtual void NextTabStop(Control* ACurrentChild) {};
     public:
+        const std::string& Name() const;
+
         Control* Root();
         Control* Parent() const;
         glm::vec2 Pos() const;
@@ -140,7 +146,9 @@ namespace RA {
         bool AllowFocus() const;
         bool PassScrollToParent() const;
         bool AutoCapture() const;
+        bool Focused();
 
+        void SetName(std::string name);
         void SetParent(Control* parent);
         void SetPos(const glm::vec2& pos);
         void SetSize(const glm::vec2& size);
@@ -152,6 +160,7 @@ namespace RA {
         void SetAllowFocus(bool allow_focus);
         void SetPassScrollToParent(bool pass_scroll);
         void SetAutoCapture(bool auto_capture);
+        void SetFocus();
     public:
         glm::mat3 Transform();
         glm::mat3 TransformInv();

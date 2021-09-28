@@ -373,7 +373,7 @@ namespace RA {
     }
     void Octree::SplitRecursive(OctreeNode* node)
     {
-        if (node->triangles.size() < m_max_triangles_to_split) return;
+        if (int(node->triangles.size()) < m_max_triangles_to_split) return;
 
         glm::AABB child_boxes[8];
         SplitBox(node->box, child_boxes);
@@ -436,7 +436,7 @@ namespace RA {
         
         m_root = std::make_unique<OctreeNode>(root_box);
         m_root->triangles.reserve(m_triangles.size() / 3);
-        for (int i = 0; i < m_triangles.size() / 3; i++) {
+        for (int i = 0; i < int(m_triangles.size() / 3); i++) {
             m_root->triangles.push_back(i);
         }
         SplitRecursive(m_root.get());

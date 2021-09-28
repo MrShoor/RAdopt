@@ -63,6 +63,7 @@ namespace RA {
     using MCMeshPtr = std::shared_ptr<MCMesh>;
 
     struct MCMeshInstanceVertex {
+        glm::mat4 bind_transform;
         glm::mat4 transform;
         int32_t materials_offset;
         int32_t bone_offset;
@@ -94,7 +95,8 @@ namespace RA {
         glm::AABB BBox() const;
         void BindArmature(const MCArmaturePtr& arm);
 
-        glm::mat4 GetTransform();
+        const glm::mat4& GetBindTransform() const;
+        const glm::mat4& GetTransform() const;
         void SetTransform(const glm::mat4 m);
 
         MCMeshInstance(MeshCollection* system, const MCMeshPtr& mesh, const MeshInstancePtr& instance, MemRangeIntfPtr remap_range);

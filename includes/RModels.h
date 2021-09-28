@@ -177,18 +177,20 @@ namespace RA {
         ArmaturePosePtr m_pose;
         std::vector<int32_t> m_group_to_bone_remap;
         glm::mat4 m_transform;
+        glm::mat4 m_bind_transform;
         std::string m_name;
         MeshPtr m_mesh;
     public:
         MeshInstance(const MeshPtr& mesh, const std::string& name, const glm::mat4& transform);
         MeshInstance(const MeshInstance& inst, bool copy_armature_pose);
-        glm::mat4 GetTransform();
+        const glm::mat4& GetBindTransform() const;
+        const glm::mat4& GetTransform() const;
         void SetTransform(const glm::mat4 m);
         MeshPtr Mesh();
-        std::string Name();
+        const std::string& Name() const;
         void BindPose(const ArmaturePosePtr& pose);
         ArmaturePose* Pose();        
-        const std::vector<int32_t>& BoneMapping();
+        const std::vector<int32_t>& BoneMapping() const;
         glm::AABB BBox();
     };
 

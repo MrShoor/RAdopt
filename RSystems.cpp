@@ -280,6 +280,7 @@ namespace RA {
     void MCMeshInstance::UpdateInstanceVertex()
     {
         MCMeshInstanceVertex new_vert;
+        new_vert.bind_transform = GetBindTransform();
         new_vert.transform = GetTransform();
         new_vert.materials_offset = m_mesh ? m_mesh->m_materials->OffsetSize().x : 0;
         new_vert.bone_offset = m_arm ? m_arm->BufOffset() : -1;
@@ -314,7 +315,11 @@ namespace RA {
 
         UpdateInstanceVertex();
     }
-    glm::mat4 MCMeshInstance::GetTransform()
+    const glm::mat4& MCMeshInstance::GetBindTransform() const
+    {
+        return m_inst->GetBindTransform();
+    }
+    const glm::mat4& MCMeshInstance::GetTransform() const
     {
         return m_inst->GetTransform();
     }
@@ -388,6 +393,10 @@ namespace RA {
     const Layout* MCMeshInstanceVertex::Layout()
     {        
         return LB()
+            ->Add("bind_trow0_", LayoutType::Float, 4)
+            ->Add("bind_trow1_", LayoutType::Float, 4)
+            ->Add("bind_trow2_", LayoutType::Float, 4)
+            ->Add("bind_trow3_", LayoutType::Float, 4)
             ->Add("trow0_", LayoutType::Float, 4)
             ->Add("trow1_", LayoutType::Float, 4)
             ->Add("trow2_", LayoutType::Float, 4)

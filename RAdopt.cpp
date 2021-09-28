@@ -529,7 +529,7 @@ namespace RA {
             nullptr,
             D3D_DRIVER_TYPE_HARDWARE,
             0,
-            D3D11_CREATE_DEVICE_SINGLETHREADED | D3D11_CREATE_DEVICE_DEBUG,
+            D3D11_CREATE_DEVICE_SINGLETHREADED,// | D3D11_CREATE_DEVICE_DEBUG,
             nullptr,
             0,
             D3D11_SDK_VERSION,
@@ -588,6 +588,14 @@ namespace RA {
             GetClientRect(m_wnd, &rct);
             return glm::ivec2(rct.right - rct.left, rct.bottom - rct.top);
         }
+    }
+    ID3D11Device* Device::_DX11_Device() const
+    {        
+        return m_device.Get();
+    }
+    ID3D11DeviceContext* Device::_DX11_DeviceContext() const
+    {
+        return m_deviceContext.Get();
     }
     States* Device::States()
     {
@@ -759,6 +767,19 @@ namespace RA {
         }
         return it->second;
     }
+    void Texture2D::ClearResViews()
+    {
+        m_uav.clear();
+        m_srv[0] = nullptr;
+        m_srv[1] = nullptr;
+        m_srv[2] = nullptr;
+        m_srv[3] = nullptr;
+    }
+    ID3D11ShaderResourceView* Texture2D::_GetShaderResView(bool as_array, bool as_cubemap)
+    {
+        auto srv = GetShaderResourceView(as_array, as_cubemap);
+        return srv.Get();
+    }
     TextureFmt Texture2D::Format() const
     {
         return m_fmt;
@@ -782,10 +803,7 @@ namespace RA {
         m_slices = 0;
         m_mips_count = 0;
         m_handle = nullptr;
-        m_srv[0] = nullptr;
-        m_srv[1] = nullptr;
-        m_srv[2] = nullptr;
-        m_srv[3] = nullptr;
+        ClearResViews();
     }
     void Texture2D::SetState(TextureFmt fmt, glm::ivec2 size, int mip_levels, int slices, const void* data)
     {
@@ -823,11 +841,7 @@ namespace RA {
             CheckD3DErr(m_device->m_device->CreateTexture2D(&desc, nullptr, &m_handle));
         }
 
-        m_srv[0] = nullptr;
-        m_srv[1] = nullptr;
-        m_srv[2] = nullptr;
-        m_srv[3] = nullptr;
-        m_uav.clear();
+        ClearResViews();
     }
     void Texture2D::SetSubData(const glm::ivec2& offset, const glm::ivec2& size, int slice, int mip, const void* data)
     {
@@ -933,11 +947,13 @@ namespace RA {
 
     int Program::ObtainSlotIdx(Program::SlotKind kind, const std::string& name, const Layout* layout)
     {
-        for (size_t i = 0; i < m_slots.size(); i++) { 
-            if (m_slots[i].name == name) {
-                assert(m_slots[i].kind == kind);
-                assert((name != "$Globals") && (m_slots[i].layout == layout));
-                return static_cast<int>(i);
+        if (name != "$Globals") {
+            for (size_t i = 0; i < m_slots.size(); i++) {
+                if (m_slots[i].name == name) {
+                    assert(m_slots[i].kind == kind);
+                    assert(m_slots[i].layout == layout);
+                    return static_cast<int>(i);
+                }
             }
         }
         ShaderSlot newSlot;

@@ -68,6 +68,10 @@ namespace RA {
     {
         return m_slice;
     }
+    glm::ivec2 BaseAtlasSprite::AtlasSize() const
+    {        
+        return m_owner->Texture()->Size();
+    }
     glm::ivec2 BaseAtlasSprite::Pos() const
     {
         return m_rect.xy();
@@ -141,18 +145,22 @@ namespace RA {
     {
         if (m_tex->SlicesCount() != m_roots.size())
             m_tex->SetState(m_tex->Format(), m_tex->Size(), 0, int(m_roots.size()), nullptr);
-        for (const auto& it : m_sprites) {
+        for (const auto& it : m_invalid_sprites) {
             assert(static_cast<AtlasSprite*>(it)->m_data->Fmt() == m_tex->Format());
             m_tex->SetSubData(it->Pos(), it->Size(), it->Slice(), 0, static_cast<AtlasSprite*>(it)->m_data->Data());
         }
+        m_invalid_sprites.clear();
     }
-    Atlas::Atlas(const DevicePtr& dev) : BaseAtlas(dev)
+    Atlas::Atlas(const DevicePtr& dev) : Atlas(dev, { 1024, 1024 })
+    {
+    }
+    Atlas::Atlas(const DevicePtr& dev, const glm::ivec2& atlas_size) : BaseAtlas(dev)
     {
         m_tm = TM();
 
         m_tex = m_dev->Create_Texture2D();
-        m_tex->SetState(TextureFmt::RGBA8, glm::ivec2(1024, 1024));
-        m_roots.push_back(std::make_unique<Node>(m_tex->Size()));
+        m_tex->SetState(TextureFmt::RGBA8, atlas_size);
+        m_roots.push_back(std::make_unique<Node>(m_tex->Size()));        
     }
     AtlasSpritePtr Atlas::ObtainSprite(const fs::path& filename)
     {
@@ -163,6 +171,7 @@ namespace RA {
             BaseAtlasSpritePtr tmp = std::static_pointer_cast<AtlasSprite>(new_sprite);
             RegisterSprite(&tmp);
             m_data[tex] = new_sprite;
+            m_invalid_sprites.insert(new_sprite.get());
             return new_sprite;
         }
         return it->second;

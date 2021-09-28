@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "RCanvas.h"
+#include "RAdoptConsts.h"
 
 namespace RA {
     void Canvas::ValidateBuffers()
@@ -413,13 +414,13 @@ namespace RA {
         m_dev = dev;
 
         m_text_out_prog = m_dev->Create_Program();
-        m_text_out_prog->Load("RAdopt_canvas_text_out", false, "D:\\Projects\\RAdopt\\shaders\\!Out");
+        m_text_out_prog->Load("RAdopt_canvas_text_out", cLoadShadersFromRes, "D:\\Projects\\RAdopt\\shaders\\!Out");
 
         m_tris_out_prog = m_dev->Create_Program();
-        m_tris_out_prog->Load("RAdopt_canvas_tris_out", false, "D:\\Projects\\RAdopt\\shaders\\!Out");
+        m_tris_out_prog->Load("RAdopt_canvas_tris_out", cLoadShadersFromRes, "D:\\Projects\\RAdopt\\shaders\\!Out");
 
         m_lines_out_prog = m_dev->Create_Program();
-        m_lines_out_prog->Load("RAdopt_canvas_lines_out", false, "D:\\Projects\\RAdopt\\shaders\\!Out");
+        m_lines_out_prog->Load("RAdopt_canvas_lines_out", cLoadShadersFromRes, "D:\\Projects\\RAdopt\\shaders\\!Out");
 
         m_glyphs_atlas = std::make_shared<Atlas_GlyphsSDF>(m_dev);
         m_sprite_atlas = std::make_shared<Atlas>(m_dev);

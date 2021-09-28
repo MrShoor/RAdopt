@@ -2,6 +2,7 @@
 #include "RAdopt.h"
 #include "RUtils.h"
 #include <filesystem>
+#include <unordered_set>
 
 namespace RA {
     namespace fs = std::filesystem;
@@ -62,6 +63,7 @@ namespace RA {
     public:
         int Index() const;
         int Slice() const;
+        glm::ivec2 AtlasSize() const;
         glm::ivec2 Pos() const;
         glm::ivec2 Size() const;
         glm::ivec4 Rect() const; //xy - min coord, zw - rect size
@@ -84,9 +86,11 @@ namespace RA {
     protected:
         TexManagerIntf* m_tm;
         std::unordered_map<TexDataIntf*, AtlasSpritePtr> m_data;
+        std::unordered_set<AtlasSprite*> m_invalid_sprites;
         void ValidateTexture() override;
     public:
         Atlas(const DevicePtr& dev);
+        Atlas(const DevicePtr& dev, const glm::ivec2& atlas_size);
         AtlasSpritePtr ObtainSprite(const fs::path& filename);
     };
     using AtlasPtr = std::shared_ptr<Atlas>;

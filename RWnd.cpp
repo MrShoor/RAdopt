@@ -80,7 +80,32 @@ namespace RA {
             MouseMove(toCoord(lParam), ToShiftState(wParam));
             return 0;
         case WM_MOUSEWHEEL:
-            MouseWheel(toCoord(lParam), GET_WHEEL_DELTA_WPARAM(wParam) / WHEEL_DELTA, ToShiftState(wParam));
+            glm::ivec2 crd = toCoord(lParam);
+            POINT pt;
+            pt.x = crd.x;
+            pt.y = crd.y;
+            ScreenToClient(hwnd, &pt);
+            crd.x = pt.x;
+            crd.y = pt.y;
+            MouseWheel(crd, GET_WHEEL_DELTA_WPARAM(wParam) / WHEEL_DELTA, ToShiftState(wParam));
+            return 0;
+        case WM_LBUTTONDBLCLK:
+            MouseDblClick(0, toCoord(lParam), ToShiftState(wParam));
+            return 0;
+        case WM_RBUTTONDBLCLK:
+            MouseDblClick(1, toCoord(lParam), ToShiftState(wParam));
+            return 0;
+        case WM_MBUTTONDBLCLK:
+            MouseDblClick(2, toCoord(lParam), ToShiftState(wParam));
+            return 0;
+        case WM_XBUTTONDBLCLK:
+            MouseDblClick(int(wParam >> 16) + 2, toCoord(lParam), ToShiftState(wParam));
+            return 0;
+        case WM_KEYDOWN:
+            KeyDown(uint32_t(wParam), (lParam & (1 << 30)) != 0);
+            return 0;
+        case WM_KEYUP:
+            KeyUp(uint32_t(wParam), (lParam & (1 << 30)) != 0);
             return 0;
         case WM_PAINT: {
                 bool processed = false;
@@ -104,7 +129,7 @@ namespace RA {
         m_class_name = class_name;
         WNDCLASSEXW wcex = { };
         wcex.cbSize = sizeof(WNDCLASSEX);
-        wcex.style = CS_HREDRAW | CS_VREDRAW;
+        wcex.style = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
         wcex.lpfnWndProc = DefWndProc;
         wcex.cbClsExtra = 0;
         wcex.cbWndExtra = 0;
@@ -156,11 +181,24 @@ namespace RA {
     void Window::MouseWheel(const glm::ivec2& crd, int delta, const ShiftState& ss)
     {
     }
+    void Window::MouseDblClick(int btn, const glm::ivec2& crd, const ShiftState& ss)
+    {
+    }
+    void Window::KeyDown(uint32_t vKey, bool duplicate)
+    {
+    }
+    void Window::KeyUp(uint32_t vKey, bool duplicate)
+    {
+    }
     void Window::Paint(bool* processed)
     {
     }
     void Window::WindowResized(const glm::ivec2& new_size)
     {
+    }
+    const DevicePtr& RenderWindow::GetDevice() const
+    {
+        return m_device;
     }
     RenderWindow::RenderWindow(std::wstring caption, bool isMainWindow) : Window(L"RenderWndClass", caption, isMainWindow)
     {
@@ -201,6 +239,12 @@ namespace RA {
             DispatchMessageW(&msg);
         }
     }
+    void UIRenderWindow::ControlsDraw_After()
+    {
+    }
+    void UIRenderWindow::ControlsDraw_Before()
+    {
+    }
     void UIRenderWindow::MouseMove(const glm::ivec2& crd, const ShiftState& ss)
     {
         m_control_global->Process_MouseMove(crd, ss);
@@ -216,6 +260,18 @@ namespace RA {
     void UIRenderWindow::MouseWheel(const glm::ivec2& crd, int delta, const ShiftState& ss)
     {
         m_control_global->Process_MouseWheel(crd, delta, ss);
+    }
+    void UIRenderWindow::MouseDblClick(int btn, const glm::ivec2& crd, const ShiftState& ss)
+    {
+        m_control_global->Process_MouseDblClick(btn, crd, ss);
+    }
+    void UIRenderWindow::KeyDown(uint32_t vKey, bool duplicate)
+    {
+        m_control_global->Process_KeyDown(vKey, duplicate);
+    }
+    void UIRenderWindow::KeyUp(uint32_t vKey, bool duplicate)
+    {
+        m_control_global->Process_KeyUp(vKey, duplicate);
     }
     void UIRenderWindow::WindowResized(const glm::ivec2& new_size)
     {
@@ -235,7 +291,9 @@ namespace RA {
         m_device->SetFrameBuffer(m_fbo);
         m_fbo->Clear(0, { 0,0,0,0 });
 
+        ControlsDraw_Before();
         m_control_global->Draw(m_ui_camera.get());
+        ControlsDraw_After();
 
         m_fbo->BlitToDefaultFBO(0);
     }

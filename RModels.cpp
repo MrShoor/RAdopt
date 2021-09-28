@@ -315,7 +315,7 @@ namespace RA {
     {
         return m_mesh;
     }
-    std::string MeshInstance::Name()
+    const std::string& MeshInstance::Name() const
     {
         return m_name;
     }
@@ -325,6 +325,7 @@ namespace RA {
         for (size_t i = 0; i < m_group_to_bone_remap.size(); i++) {
             m_group_to_bone_remap[i] = pose->Armature()->FindBoneIdx(m_mesh->vgroups[i].c_str());
         }
+        m_bind_transform = glm::inverse(pose->Armature()->transform);
     }
     ArmaturePose* MeshInstance::Pose()
     {
@@ -337,6 +338,7 @@ namespace RA {
         m_transform = transform;
         m_group_to_bone_remap.resize(mesh->vgroups.size());
         for (int& g : m_group_to_bone_remap) g = -1;
+        m_bind_transform = glm::mat4(1.0f);
     }
     MeshInstance::MeshInstance(const MeshInstance& inst, bool copy_armature_pose)
     {
@@ -352,8 +354,13 @@ namespace RA {
         m_transform = inst.m_transform;
         m_name = inst.m_name;
         m_mesh = inst.m_mesh;
+        m_bind_transform = inst.m_bind_transform;
     }
-    glm::mat4 MeshInstance::GetTransform()
+    const glm::mat4& MeshInstance::GetBindTransform() const
+    {
+        return m_bind_transform;
+    }
+    const glm::mat4& MeshInstance::GetTransform() const
     {
         return m_transform;
     }
@@ -361,7 +368,7 @@ namespace RA {
     {
         m_transform = m;
     }
-    const std::vector<int32_t>& MeshInstance::BoneMapping()
+    const std::vector<int32_t>& MeshInstance::BoneMapping() const
     {
         return m_group_to_bone_remap;
     }
@@ -435,7 +442,7 @@ namespace RA {
         for (const AnimState& astate : anims) {
             int anim_idx = astate.anim_idx;
             if (anim_idx < 0) continue;
-            if (anim_idx >= m_arm->anims.size()) continue;
+            if (anim_idx >= int(m_arm->anims.size())) continue;
             std::unique_ptr<Anim>& a = m_arm->anims[anim_idx];
             a->EvalFrame(astate.frame, m_anim_pose.data());
 

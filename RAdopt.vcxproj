@@ -92,6 +92,7 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>..\FreeImage\Source;includes;D:\Projects\glm;</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>
@@ -111,6 +112,7 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>..\FreeImage\Source;includes;D:\Projects\glm;</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>
@@ -130,6 +132,7 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>..\FreeImage\Source;includes;D:\Projects\glm;</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>
@@ -149,6 +152,7 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>..\FreeImage\Source;includes;D:\Projects\glm;</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>
@@ -169,6 +173,7 @@
     <ClInclude Include="includes\RSystems.h" />
     <ClInclude Include="includes\RTypes.h" />
     <ClInclude Include="includes\RWnd.h" />
+    <ClInclude Include="RAdoptConsts.h" />
     <ClInclude Include="stb_image.h" />
     <ClInclude Include="stb_image_bindings.h" />
     <ClInclude Include="includes\RAdopt.h" />
@@ -196,7 +201,7 @@
     <ClCompile Include="RUtils.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="..\..\RAdopt\shaders\RAdopt_shaders.rc" />
+    <ResourceCompile Include="shaders\RAdopt_shaders.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
