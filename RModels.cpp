@@ -1,55 +1,10 @@
 #include "pch.h"
 #include "RModels.h"
+#include "RUtils.h"
 #include <fstream>
 #include <cassert>
 
 namespace RA {
-    struct File {
-    private:
-        std::filesystem::path m_path;
-        FILE* m_f;
-    public:
-        std::filesystem::path Path() {
-            return m_path;
-        }
-        bool Good() {
-            return m_f;
-        }
-        File(const fs::path& filename) {
-            m_path = std::filesystem::absolute(filename);
-#ifdef _WIN32
-        _wfopen_s(&m_f, m_path.wstring().c_str(), L"rb");
-#else
-        fopen_s(&m_f, m_path.string().c_str(), "rb");
-#endif
-        }
-        ~File() {
-            if (m_f)
-                fclose(m_f);
-        }
-        void ReadBuf(void* v, int size) {
-            fread(v, size, 1, m_f);
-        }
-        template <typename T>
-        inline T& Read(T& x) { 
-            ReadBuf(&x, sizeof(x));
-            return x; 
-        }
-        std::string ReadString() {
-            uint32_t n;
-            Read(n);
-            std::string res;
-            if (n) {
-                res.resize(n);
-                ReadBuf(const_cast<char*>(res.data()), n);
-            }
-            return res;
-        }
-        int Tell() {
-            return ftell(m_f);
-        }
-    };
-
     std::unique_ptr<Bone> LoadAVM_Bone(File& f, std::string& parent_name)
     {
         std::unique_ptr<Bone> bone = std::make_unique<Bone>();

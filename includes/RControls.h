@@ -15,6 +15,9 @@ namespace RA {
         Control* m_captured;
         Control* m_focused;
 
+        bool m_in_drag[5] = { false, false, false, false, false };
+        glm::vec2 m_drag_point[5];
+
         std::unique_ptr<Control> m_root;
 
         std::vector<Control*> m_ups_subs;
@@ -119,9 +122,10 @@ namespace RA {
         virtual void Notify_MouseUp(int btn, const glm::vec2& pt, const ShiftState& shifts) {};
         virtual void Notify_MouseDblClick(int btn, const glm::vec2& pt, const ShiftState& shifts) {};
 
-        virtual void Notify_DragStart(int btn, const glm::vec2& pt, const ShiftState& shifts) {};
-        virtual void Notify_DragMove(int btn, const glm::vec2& pt, const ShiftState& shifts) {};
-        virtual void Notify_DragStop(int btn, const glm::vec2& pt, const ShiftState& shifts) {};
+        bool InDrag() const;
+        virtual void Notify_DragStart(int btn, const glm::vec2& pt, const glm::vec2& drag_pt, const ShiftState& shifts) {};
+        virtual void Notify_DragMove(int btn, const glm::vec2& pt, const glm::vec2& drag_pt, const ShiftState& shifts) {};
+        virtual void Notify_DragStop(int btn, const glm::vec2& pt, const glm::vec2& drag_pt, const ShiftState& shifts) {};
 
         virtual void Notify_FocusSet() {};
         virtual void Notify_FocusLost() {};

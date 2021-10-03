@@ -78,6 +78,7 @@ namespace RA {
         TexDataIntf* m_data;
         AtlasSprite(Atlas* owner, TexDataIntf* data);
     public:
+        const TexDataIntf* TexData() const;
     };
     using AtlasSpritePtr = std::shared_ptr<AtlasSprite>;
 

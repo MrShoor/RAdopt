@@ -15,15 +15,15 @@ namespace RA {
 		}
 		return it->second.get();
     }
-	TextureFmt STB_TexData::Fmt()
+	TextureFmt STB_TexData::Fmt() const
 	{
 		return TextureFmt::RGBA8;
 	}
-	const void* STB_TexData::Data()
+	const void* STB_TexData::Data() const
 	{
 		return m_data;
 	}
-	glm::ivec2 STB_TexData::Size()
+	glm::ivec2 STB_TexData::Size() const
 	{
 		return m_size;
 	}

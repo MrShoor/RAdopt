@@ -95,9 +95,9 @@ namespace RA {
 
     class TexDataIntf {
     public:
-        virtual TextureFmt Fmt() = 0;
-        virtual const void* Data() = 0;
-        virtual glm::ivec2 Size() = 0;
+        virtual TextureFmt Fmt() const = 0;
+        virtual const void* Data() const = 0;
+        virtual glm::ivec2 Size() const = 0;
     };
     class TexManagerIntf {
     public:
@@ -198,5 +198,65 @@ namespace RA {
         float RayCast(const glm::vec3& ray_start, const glm::vec3& ray_end);
         bool RayCast(const glm::vec3& ray_start, const glm::vec3& ray_end, float* t, glm::vec3* normal);
         Octree(std::vector<glm::vec3> triangles, int max_triangles_to_split);
+    };
+
+    struct File {
+    private:
+        std::filesystem::path m_path;
+        FILE* m_f;
+    public:
+        std::filesystem::path Path() {
+            return m_path;
+        }
+        bool Good() {
+            return m_f;
+        }
+        File(const std::filesystem::path& filename, bool write = false) {
+            m_path = std::filesystem::absolute(filename);
+#ifdef _WIN32
+            _wfopen_s(&m_f, m_path.wstring().c_str(), write ? L"wb" : L"rb");
+#else
+            fopen_s(&m_f, m_path.string().c_str(), write ? L"wb" : L"rb");
+#endif
+        }
+        ~File() {
+            if (m_f)
+                fclose(m_f);
+        }
+        inline void ReadBuf(void* v, int size) {
+            fread(v, size, 1, m_f);
+        }
+        inline void WriteBuf(const void* v, int size) {
+            fwrite(v, size, 1, m_f);
+        }
+        template <typename T>
+        inline T& Read(T& x) {
+            ReadBuf(&x, sizeof(x));
+            return x;
+        }
+        template <typename T>
+        inline void Write(const T& x) {
+            WriteBuf(&x, sizeof(x));
+        }
+        inline std::string ReadString() {
+            uint32_t n;
+            Read(n);
+            std::string res;
+            if (n) {
+                res.resize(n);
+                ReadBuf(const_cast<char*>(res.data()), n);
+            }
+            return res;
+        }
+        inline void WriteString(const std::string& s) {
+            uint32_t n = uint32_t(s.size());
+            Write(n);
+            if (n) {
+                WriteBuf(s.data(), n);
+            }
+        }
+        inline int Tell() {
+            return ftell(m_f);
+        }
     };
 }

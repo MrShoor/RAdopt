@@ -64,6 +64,7 @@ namespace RA {
     }
     void Control::HitTestLocal(const glm::vec2& local_pt, Control*& hit_control)
     {
+        hit_control = this;
     }
     void Control::UPSSubscribe()
     {
@@ -138,6 +139,16 @@ namespace RA {
         if (AutoCapture()) {
             Global()->SetCaptured(this);
         }
+    }
+    bool Control::InDrag() const
+    {
+        if (m_cglobal)
+            if (m_cglobal->m_captured == this) {            
+                for (int i = 0; i < 5; i++) {
+                    if (m_cglobal->m_in_drag[i]) return true;
+                }
+            }
+        return false;
     }
     const std::string& Control::Name() const
     {
@@ -448,6 +459,18 @@ namespace RA {
     void ControlGlobal::SetCaptured(Control* ctrl)
     {
         if (m_captured != ctrl) {
+            if (m_captured) {
+                for (int i = 0; i < 5; i++) {
+                    if (m_in_drag[i]) {
+                        ShiftState ss;
+                        ss.ctrl = GetKeyState(VK_CONTROL) < 0;
+                        for (int j = 0; j < 5; j++) ss.mouse_btn[j] = false;
+                        ss.mouse_btn[i] = true;
+                        ss.shift = GetKeyState(VK_SHIFT) < 0;
+                        m_captured->Notify_DragStop(i, m_drag_point[i], m_drag_point[i], ss);
+                    }
+                }
+            }
             m_captured = ctrl;
             if (m_captured)
                 SetCapture(Device()->Window());
@@ -469,7 +492,24 @@ namespace RA {
     void ControlGlobal::Process_MouseMove(const glm::vec2& pt, const ShiftState& shifts)
     {
         Control* ctrl = UpdateMovedState(pt);        
-        if (ctrl) ctrl->Notify_MouseMove(ConvertEventCoord(ctrl, pt), shifts);
+        if (ctrl) {            
+            if (Captured() == ctrl) {
+                for (int i = 0; i < 5; i++) {
+                    if (!m_in_drag[i]) {
+                        glm::vec2 dir = m_drag_point[i] - pt;
+                        float dist = ctrl->DragThreshold();
+                        if (glm::dot(dir, dir) > dist * dist) {
+                            m_in_drag[i] = true;
+                            ctrl->Notify_DragStart(i, pt, m_drag_point[i], shifts);
+                        }
+                    }
+                    if (m_in_drag[i]) {
+                        ctrl->Notify_DragMove(i, pt, m_drag_point[i], shifts);
+                    }
+                }
+            }
+            ctrl->Notify_MouseMove(ConvertEventCoord(ctrl, pt), shifts);
+        }        
     }
     void ControlGlobal::Process_MouseWheel(const glm::vec2& pt, int delta, const ShiftState& shifts)
     {
@@ -482,6 +522,10 @@ namespace RA {
         if (m) {
             m->Notify_MouseDown(btn, ConvertEventCoord(m, pt), shifts);
             if (m->AllowFocus()) SetFocused(m);
+            Control* cap = Captured();
+            if (cap == m) {
+                m_drag_point[btn] = pt;
+            }
         }
         else {
             SetFocused(nullptr);
@@ -489,8 +533,17 @@ namespace RA {
     }
     void ControlGlobal::Process_MouseUp(int btn, const glm::vec2& pt, const ShiftState& shifts)
     {
-        Control* m = UpdateMovedState(pt);
-        if (m) m->Notify_MouseUp(btn, ConvertEventCoord(m, pt), shifts);
+        Control* m = UpdateMovedState(pt);        
+        if (m) {
+            m->Notify_MouseUp(btn, ConvertEventCoord(m, pt), shifts);
+            if (Captured() == m) {
+                for (int i = 0; i < 5; i++) {
+                    if (m_in_drag[i])
+                        m->Notify_DragStop(btn, pt, m_drag_point[i], shifts);
+                    m_in_drag[i] = false;
+                }
+            }
+        }
         SetCaptured(nullptr);
     }
     void ControlGlobal::Process_MouseDblClick(int btn, const glm::vec2& pt, const ShiftState& shifts)

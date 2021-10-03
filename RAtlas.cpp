@@ -50,6 +50,9 @@ namespace RA {
     }
     BaseAtlas::~BaseAtlas()
     {
+        for (auto& s : m_sprites) {
+            s->m_owner = nullptr;
+        }
     }
     BaseAtlasSprite::BaseAtlasSprite(BaseAtlas* owner, const glm::ivec2& size)
     {
@@ -179,5 +182,9 @@ namespace RA {
     AtlasSprite::AtlasSprite(Atlas* owner, TexDataIntf* data) : BaseAtlasSprite(owner, data->Size())
     {
         m_data = data;
+    }
+    const TexDataIntf* AtlasSprite::TexData() const 
+    {
+        return m_data;
     }
 }

@@ -12,9 +12,9 @@ namespace RA {
         glm::ivec2 m_size;
         stbi_uc* m_data;
     public:
-        TextureFmt Fmt() override;
-        const void* Data() override;
-        glm::ivec2 Size() override;
+        TextureFmt Fmt() const override;
+        const void* Data() const override;
+        glm::ivec2 Size() const override;
 
         STB_TexData(const fs::path& filename);
         ~STB_TexData();
