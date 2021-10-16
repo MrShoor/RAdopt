@@ -64,6 +64,12 @@ namespace RA {
         {0,0,0,0},
         Compare::never
     };
+    const static Sampler cSampler_LinearClamped{
+        TexFilter::linear , TexFilter::linear , 16 ,
+        TexWrap::clamp, TexWrap::clamp, TexWrap::clamp,
+        {0,0,0,0},
+        Compare::never
+    };
     const static Sampler cSampler_NoFilter{
         TexFilter::point , TexFilter::none , 0 ,
         TexWrap::repeat, TexWrap::repeat, TexWrap::repeat,
@@ -176,7 +182,7 @@ namespace RA {
         Program* m_active_program;
 
         std::weak_ptr<FrameBuffer> m_active_fbo;
-        FrameBuffer* m_active_fbo_ptr;
+        FrameBuffer* m_active_fbo_ptr = nullptr;
 
         std::unique_ptr<States> m_states;
 
