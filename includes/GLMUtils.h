@@ -3,6 +3,9 @@
 #include <limits>
 #include <functional>
 
+static constexpr float cPI = 3.1415926535897932384626433832795f;
+static constexpr float cPI2 = 6.283185307179586476925286766559f;
+
 namespace glm {
     struct Plane;
 
@@ -150,7 +153,11 @@ namespace glm {
     };
 
     inline float NormalizeAngle(float v) {
-        float pi2 = glm::pi<float>() * 2;
-        return fract(v / pi2) * pi2;
+        return fract(v / cPI2) * cPI2;
+    }
+    inline float NormalizeAngle_Pi_Pi(float v) {
+        float a = fract(v / cPI2) * cPI2;
+        if (a > cPI) a -= 2 * cPI;
+        return a;
     }
 }

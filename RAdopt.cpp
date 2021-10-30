@@ -1197,6 +1197,9 @@ namespace RA {
                     }
                 }
             }
+            else {
+                throw std::runtime_error("resource not found: " + name);
+            }
         }
         else {
             std::string fullpath = dir + "\\DX_" + name + ".hlsl";

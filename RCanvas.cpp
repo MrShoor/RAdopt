@@ -405,6 +405,10 @@ namespace RA {
             ->Add("sprite_idx", LayoutType::UInt, 1)
             ->Finish();
     }
+    void CanvasCommonObject::Validate()
+    {
+        m_glyphs_atlas->Texture();
+    }
     DevicePtr CanvasCommonObject::Device()
     {
         return m_dev;

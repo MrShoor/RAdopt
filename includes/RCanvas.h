@@ -14,6 +14,7 @@ namespace RA {
         Atlas_GlyphsSDFPtr m_glyphs_atlas;
         AtlasPtr m_sprite_atlas;
     public:
+        void Validate();
         DevicePtr Device();
         CanvasCommonObject(const DevicePtr& dev);
     };
