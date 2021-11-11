@@ -42,6 +42,7 @@ namespace RA {
         void ValidateSBO();
         void ValidateAll();
         void RegisterSprite(BaseAtlasSpritePtr* img);
+        void InvalidateTex();
     public:
         StructuredBufferPtr GlyphsSBO();
         Texture2DPtr Texture();

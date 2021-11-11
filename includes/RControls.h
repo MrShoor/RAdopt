@@ -96,7 +96,6 @@ namespace RA {
     protected:
         bool m_valid;
         void Validate();
-        void Invalidate();
         virtual void DoValidate() {};
         virtual void DrawControl(const glm::mat3& transform, CameraBase* camera);
         virtual void DrawRecursive(const glm::mat3& parent_transform, CameraBase* camera);
@@ -165,6 +164,8 @@ namespace RA {
         void SetPassScrollToParent(bool pass_scroll);
         void SetAutoCapture(bool auto_capture);
         void SetFocus();
+
+        void Invalidate();
     public:
         glm::mat3 Transform();
         glm::mat3 TransformInv();

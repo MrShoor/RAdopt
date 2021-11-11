@@ -6,7 +6,7 @@ namespace RA {
     void Canvas::ValidateBuffers()
     {
         if (!m_text_buf_valid) {
-            m_text_buf->SetState(sizeof(TextGlyphVertex3D), int(m_text.size()), false, false, m_text.data());
+            m_text_buf->SetState(TextGlyphVertex3D::Layout(), int(m_text.size()), m_text.data());
             m_text_buf_valid = true;
         }
         if (!m_tris_buf_valid) {
@@ -79,9 +79,9 @@ namespace RA {
             m_text_out_prog->SetValue("view_pixel_size", view_pixel_size);
             m_text_out_prog->SetValue("pos3d", m_pos);
             m_text_out_prog->SetValue("transform_2d", m4);
-            m_text_out_prog->SetResource("glyphs", m_text_buf);
             m_text_out_prog->SetResource("atlas", m_glyphs_atlas->Texture());
             m_text_out_prog->SetResource("atlasSampler", RA::cSampler_Linear);
+            m_text_out_prog->SetInputBuffers(nullptr, nullptr, m_text_buf);
             break;
         }
         case BatchKind::Lines: {
@@ -154,6 +154,73 @@ namespace RA {
         m_used_sprites.push_back(sprite);
 
         PushBatch(BatchKind::Tris, 6);
+    }
+    void Canvas::AddSprite(const glm::vec2& pos, const glm::vec2& origin, const glm::vec2& size, const AtlasSpritePtr& sprite)
+    {
+        AddSprite(pos, origin, size, 0, glm::ivec4(0, 0, sprite->Size()), sprite);
+    }
+    void Canvas::Add9Patch(const glm::AABR& rect, const glm::vec2& scale, int x1, int x2, int y1, int y2, const AtlasSpritePtr& sprite)
+    {
+        TrisVertex v[16];
+        float xx[4];
+        xx[0] = rect.min.x;
+        xx[1] = rect.min.x + x1 * scale.x;
+        xx[2] = rect.max.x - x2 * scale.x;
+        xx[3] = rect.max.x;
+        if (xx[1] > xx[2]) {
+            xx[1] = (xx[1] + xx[2]) * 0.5f;
+            xx[2] = xx[1];
+        }
+        float yy[4];
+        yy[0] = rect.min.y;
+        yy[1] = rect.min.y + y1 * scale.y;
+        yy[2] = rect.max.y - y2 * scale.y;
+        yy[3] = rect.max.y;
+        if (yy[1] > yy[2]) {
+            yy[1] = (yy[1] + yy[2]) * 0.5f;
+            yy[2] = yy[1];
+        }
+        glm::vec4 rct = sprite->Rect();
+        float tx[4];
+        tx[0] = 0.0f;
+        tx[1] = x1 / rct.z;
+        tx[2] = (rct.z - x2) / rct.z;
+        tx[3] = 1.0f;
+        float ty[4];
+        ty[0] = 0.0f;
+        ty[1] = y1 / rct.w;
+        ty[2] = (rct.w - y2) / rct.w;
+        ty[3] = 1.0f;
+        for (int j = 0; j < 4; j++) {
+            for (int i = 0; i < 4; i++) {            
+                int n = j * 4 + i;
+                v[n].coord.x = xx[i];
+                v[n].coord.y = yy[j];
+                v[n].color = m_pen.GetColor();
+                v[n].hinting = m_pen.GetHinting() ? 1.0f : 0.0f;
+                v[n].sprite_idx = sprite->Index();
+                v[n].texcoord.x = tx[i];
+                v[n].texcoord.y = ty[j];
+            }
+        }
+
+        for (int j = 0; j < 3; j++) {
+            for (int i = 0; i < 3; i++) {
+                int offset = i + j * 4;
+                m_tris.push_back(v[offset + 0]);
+                m_tris.push_back(v[offset + 1]);
+                m_tris.push_back(v[offset + 4]);
+                m_tris.push_back(v[offset + 1]);
+                m_tris.push_back(v[offset + 5]);
+                m_tris.push_back(v[offset + 4]);
+            }
+        }
+
+        m_tris_buf_valid = false;
+
+        m_used_sprites.push_back(sprite);
+
+        PushBatch(BatchKind::Tris, 6 * 9);
     }
     void Canvas::AddLine(const glm::vec2& pt1, const glm::vec2& pt2)
     {
@@ -299,7 +366,6 @@ namespace RA {
             }
             case BatchKind::Glyphs: {
                 m_text_out_prog->SelectProgram();
-                m_text_out_prog->SetValue("base_instance", batch.ranges.x);
                 m_text_out_prog->Draw(PrimTopology::Trianglestrip, 0, 4, batch.ranges.y, batch.ranges.x);
                 break;
             }
@@ -330,7 +396,7 @@ namespace RA {
     {
         m_dev = dev;
 
-        m_text_buf = m_dev->Create_StructuredBuffer();
+        m_text_buf = m_dev->Create_VertexBuffer();
         m_text_buf_valid = true;
 
         m_tris_buf = m_dev->Create_VertexBuffer();
@@ -437,6 +503,21 @@ namespace RA {
             ->Add("color", LayoutType::Float, 4)
             ->Add("width", LayoutType::Float, 2)
             ->Add("hinting", LayoutType::Float, 1)
+            ->Finish();
+    }
+    const Layout* Canvas::TextGlyphVertex3D::Layout()
+    {
+        return LB()->Add("pos", LayoutType::Float, 2)
+            ->Add("size", LayoutType::Float, 2)
+            ->Add("color", LayoutType::Float, 4)
+            ->Add("halign", LayoutType::Float, 1)
+            ->Add("sdfoffset", LayoutType::Float, 1)
+            ->Add("sprite_xy", LayoutType::Float, 2)
+            ->Add("sprite_size", LayoutType::Float, 2)
+            ->Add("slice_idx", LayoutType::UInt, 1)
+            ->Add("dummy", LayoutType::Float, 1)
+            ->Add("bounds2d", LayoutType::Float, 4)
+            ->Add("valign", LayoutType::Float, 1)
             ->Finish();
     }
 }

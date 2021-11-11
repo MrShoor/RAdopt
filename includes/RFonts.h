@@ -122,4 +122,6 @@ namespace RA {
     using ITextBuilderPtr = std::shared_ptr<ITextBuilder>;
 
     ITextBuilderPtr Create_TextBuilder(Atlas_GlyphsSDF* atlas);
+
+    void RegisterFont(const std::filesystem::path& fname);
 }

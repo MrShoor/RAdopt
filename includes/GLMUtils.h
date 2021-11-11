@@ -9,6 +9,76 @@ static constexpr float cPI2 = 6.283185307179586476925286766559f;
 namespace glm {
     struct Plane;
 
+    struct AABR {
+        vec2 min;
+        vec2 max;
+        AABR() {
+            SetEmpty();
+        }
+        AABR(const glm::vec2& min, const glm::vec2& max) : min(min), max(max) {
+        }
+        inline bool IsEmpty() const {
+            return (min.x >= max.x) || (min.y >= max.y);
+        }
+        inline void SetEmpty() {
+            min.x = std::numeric_limits<float>::max();
+            min.y = std::numeric_limits<float>::max();
+            max.x = std::numeric_limits<float>::lowest();
+            max.y = std::numeric_limits<float>::lowest();
+        }
+        inline glm::vec2 Center() const {
+            return (min + max) * 0.5f;
+        }
+        inline glm::vec2 Size() const {
+            return (max - min);
+        }
+        inline AABR& operator += (const vec2& v) {
+            min = glm::min(min, v);
+            max = glm::max(max, v);
+            return *this;
+        }
+        inline AABR& operator += (const AABR& b) {
+            min = glm::min(min, b.min);
+            max = glm::max(max, b.max);
+            return *this;
+        }
+        inline AABR& operator *= (const vec2& v) {
+            min *= v;
+            max *= v;
+            return *this;
+        }
+        inline AABR operator + (const AABR& b) const {
+            AABR res;
+            res.min = glm::min(min, b.min);
+            res.max = glm::max(max, b.max);
+            return res;
+        }
+        inline AABR Expand(float expansion) const {
+            AABR res = *this;
+            res.min -= glm::vec2(expansion, expansion);
+            res.max += glm::vec2(expansion, expansion);
+            return res;
+        }
+        inline AABR Expand(const glm::vec2& expansion) const {
+            AABR res = *this;
+            res.min -= expansion;
+            res.max += expansion;
+            return res;
+        }
+        inline AABR Offset(const glm::vec2& offset) const {
+            AABR res = *this;
+            res.min += offset;
+            res.max += offset;
+            return res;
+        }
+        inline AABR Intersect(const glm::AABR& box) const {
+            AABR res;
+            res.min = glm::max(min, box.min);
+            res.max = glm::min(max, box.max);
+            return res;
+        }
+    };
+
     struct AABB {
         vec3 min;
         vec3 max;

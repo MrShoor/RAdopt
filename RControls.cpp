@@ -220,6 +220,7 @@ namespace RA {
             for (auto c : m_childs) {
                 c->Notify_ParentSizeChanged();
             }
+            Invalidate();
         }
     }
     glm::vec2 Control::Origin() const

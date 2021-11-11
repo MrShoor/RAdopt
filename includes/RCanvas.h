@@ -28,7 +28,7 @@ namespace RA {
 
     struct CanvasBuffers {
         const std::vector<Batch>* batches;
-        const StructuredBufferPtr* text_buf;
+        const VertexBufferPtr* text_buf;
         const VertexBufferPtr* tris_buf;
     };
 
@@ -67,6 +67,7 @@ namespace RA {
                 b.w -= lines->TotalHeight();
                 bounds2d = b;
             }
+            static const Layout* Layout();
         };
         struct TrisVertex {
             glm::vec2 coord;
@@ -99,7 +100,7 @@ namespace RA {
         std::vector<Batch> m_batches;
 
         std::vector<TextGlyphVertex3D> m_text;
-        StructuredBufferPtr m_text_buf;
+        VertexBufferPtr m_text_buf;
         bool m_text_buf_valid;
 
         std::vector<AtlasSpritePtr> m_used_sprites;
@@ -133,6 +134,15 @@ namespace RA {
                        float rotation,
                        const glm::ivec4& sprite_cliprect, //xy - min coord, zw - rect size
                        const AtlasSpritePtr& sprite);
+        void AddSprite(const glm::vec2& pos,
+                       const glm::vec2& origin,
+                       const glm::vec2& size,
+                       const AtlasSpritePtr& sprite);
+        void Add9Patch(const glm::AABR& rect,
+                       const glm::vec2& scale,
+                       int x1, int x2, int y1, int y2,
+                       const AtlasSpritePtr& sprite
+                       );
 
         void AddLine(const glm::vec2& pt1, const glm::vec2& pt2);
         void AddRectangle(const glm::vec4& bounds);

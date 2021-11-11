@@ -82,6 +82,7 @@ namespace RA {
                 }
             }
             new_sprite->m_slice = slice;
+            InvalidateTex();
             return new_sprite;
         }
         return it->second;
@@ -236,11 +237,11 @@ namespace RA {
     }
 
     struct LineInfo {
-        LineAlign align;
-        glm::vec2 yymetrics;
-        float ypos;
-        float width;
-        glm::ivec2 glyphs;
+        LineAlign align = LineAlign::Left;
+        glm::vec2 yymetrics = { 0,0 };
+        float ypos = 0;
+        float width = 0;
+        glm::ivec2 glyphs = { 0,0 };
         std::vector<glm::vec3> xxxmetrics;
     };
 
@@ -358,6 +359,10 @@ namespace RA {
     ITextBuilderPtr Create_TextBuilder(Atlas_GlyphsSDF* atlas)
     {
         return std::make_shared<DefTextBuilder>(atlas);
+    }
+    void RegisterFont(const std::filesystem::path& fname)
+    {
+        AddFontResourceExW(fname.c_str(), FR_PRIVATE, 0);
     }
     Sprite_GlyphPtr DefTextBuilder::ObtainSprite(wchar_t w)
     {

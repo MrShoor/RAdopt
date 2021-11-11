@@ -73,7 +73,7 @@ namespace RA {
         m_aspect = aspect;
         m_near_far = near_far;
         m_depth_range = depth_range;
-        
+
         float h = 1.0f / tan(m_fov * 0.5f);
         float w = h * m_aspect;
         float q = 1.0f / (m_near_far.x - m_near_far.y);
@@ -110,6 +110,14 @@ namespace RA {
         m_buf.UpdateViewProj();
 
         m_ubo->SetSubData(0, 1, &m_buf);
+    }
+    float Camera::FoV() const
+    {
+        return m_fov;
+    }
+    float Camera::Aspect() const
+    {
+        return m_aspect;
     }
     void Camera::SetAspect(HWND wnd)
     {
@@ -574,7 +582,7 @@ namespace RA {
         RECT rct;        
         GetClientRect(m_ubo->GetDevice()->Window(), &rct);
         m_buf.view = glm::mat4(1.0);
-        glm::mat4 ms = glm::scale(glm::vec3(2.0f / rct.right, -2.0f / rct.bottom, 0.0f));
+        glm::mat4 ms = glm::scale(glm::vec3(2.0f / rct.right, -2.0f / rct.bottom, 1.0f));
         m_buf.proj = glm::translate(glm::vec3(-1.f, 1.f, 0.5f)) * ms;
 
         m_buf.UpdateViewProj();

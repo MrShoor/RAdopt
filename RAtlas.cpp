@@ -15,7 +15,7 @@ namespace RA {
     void BaseAtlas::ValidateAll()
     {
         if (!m_tex_valid) {
-            //m_tex_valid = true;
+            m_tex_valid = true;
             ValidateTexture();
             ValidateSBO();
         }
@@ -31,6 +31,10 @@ namespace RA {
             }
         }
         (*sprite)->m_slice = slice;
+    }
+    void BaseAtlas::InvalidateTex()
+    {
+        m_tex_valid = false;
     }
     StructuredBufferPtr BaseAtlas::GlyphsSBO()
     {
@@ -147,7 +151,12 @@ namespace RA {
     void Atlas::ValidateTexture()
     {
         if (m_tex->SlicesCount() != m_roots.size())
+        {
             m_tex->SetState(m_tex->Format(), m_tex->Size(), 0, int(m_roots.size()), nullptr);
+            for (const auto& s : m_sprites) {
+                m_invalid_sprites.insert(static_cast<AtlasSprite*>(s));
+            }
+        }
         for (const auto& it : m_invalid_sprites) {
             assert(static_cast<AtlasSprite*>(it)->m_data->Fmt() == m_tex->Format());
             m_tex->SetSubData(it->Pos(), it->Size(), it->Slice(), 0, static_cast<AtlasSprite*>(it)->m_data->Data());
@@ -175,6 +184,7 @@ namespace RA {
             RegisterSprite(&tmp);
             m_data[tex] = new_sprite;
             m_invalid_sprites.insert(new_sprite.get());
+            InvalidateTex();
             return new_sprite;
         }
         return it->second;

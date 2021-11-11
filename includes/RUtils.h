@@ -76,6 +76,9 @@ namespace RA {
         void SetProjection(float fov, float aspect, const glm::vec2& near_far, const glm::vec2& depth_range = {1, 0});
         void SetOrtho(float width, float height, const glm::vec2& near_far, const glm::vec2& depth_range = { 1, 0 });
 
+        float FoV() const;
+        float Aspect() const;
+
         void SetAspect(HWND wnd);
         void SetNearFar(const glm::vec2& near_far);
 
