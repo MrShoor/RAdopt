@@ -19,4 +19,7 @@ namespace RA {
 
     template<typename T, typename... Args>
     SPtr<T> SPtrMake(Args&&... args) { return std::make_shared<T>(args...); }
+
+    template<typename T>
+    using WPtr = std::weak_ptr<T>;
 }

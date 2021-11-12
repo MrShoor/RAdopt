@@ -40,7 +40,7 @@ namespace RA {
 		int targetformat = STBI_rgb_alpha;
 		m_data = stbi_load(filename.u8string().c_str(), &m_size.x, &m_size.y, &dont_care, targetformat);
 		if (!m_data)
-			throw std::runtime_error("load failed");
+			throw std::runtime_error("load failed: "+filename.u8string());
 		
 	}
 	STB_TexData::~STB_TexData()
