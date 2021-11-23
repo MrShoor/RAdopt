@@ -77,6 +77,13 @@ namespace glm {
             res.max = glm::min(max, box.max);
             return res;
         }
+        inline bool PtIn(const glm::vec2& pt) const {
+            if (pt.x < min.x) return false;
+            if (pt.y < min.y) return false;
+            if (pt.x >= max.x) return false;
+            if (pt.y >= max.y) return false;
+            return true;
+        }
     };
 
     struct AABB {

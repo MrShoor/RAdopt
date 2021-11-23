@@ -107,7 +107,7 @@ namespace RA {
         void UPSSubscribe();
         void UPSUnsubscribe();
         virtual void OnUPS(uint64_t dt);
-    protected:
+    public:
         glm::vec2 Space_ParentToLocal(const glm::vec2& pt);
         glm::vec2 Space_RootControlToLocal(const glm::vec2& pt);
         glm::vec2 Space_LocalToRootControl(const glm::vec2& pt);
@@ -154,7 +154,7 @@ namespace RA {
         void SetName(std::string name);
         void SetParent(Control* parent);
         void SetPos(const glm::vec2& pos);
-        void SetSize(const glm::vec2& size);
+        virtual void SetSize(const glm::vec2& size);
         void SetOrigin(const glm::vec2& origin);
         void SetAngle(float angle);
         void SetTabIndex(int idx);
@@ -208,6 +208,8 @@ namespace RA {
         std::function<void(Control*)> m_onclick;
     protected:
         void HitTestLocal(const glm::vec2& local_pt, Control*& hit_control) override;
+        void Notify_MouseDown(int btn, const glm::vec2& pt, const ShiftState& shifts) override;
+        void Notify_MouseUp(int btn, const glm::vec2& pt, const ShiftState& shifts) override;
     public:
         bool Downed() const;
         std::wstring Text() const;

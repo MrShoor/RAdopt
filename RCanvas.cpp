@@ -471,6 +471,10 @@ namespace RA {
             ->Add("sprite_idx", LayoutType::UInt, 1)
             ->Finish();
     }
+    AtlasPtr CanvasCommonObject::GetAtlas() const
+    {
+        return m_sprite_atlas;
+    }
     void CanvasCommonObject::Validate()
     {
         m_glyphs_atlas->Texture();

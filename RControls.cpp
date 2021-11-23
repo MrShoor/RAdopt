@@ -390,6 +390,23 @@ namespace RA {
     {
         hit_control = this;
     }
+    void CustomButton::Notify_MouseDown(int btn, const glm::vec2& pt, const ShiftState& shifts)
+    {
+        CustomControl::Notify_MouseDown(btn, pt, shifts);
+        m_downed = true;
+    }
+    void CustomButton::Notify_MouseUp(int btn, const glm::vec2& pt, const ShiftState& shifts)
+    {
+        CustomControl::Notify_MouseUp(btn, pt, shifts);
+        if (!m_downed) return;
+        Control* ctrl;
+        HitTestLocal(pt, ctrl);
+        if (ctrl == this) {
+            if (m_onclick) {
+                m_onclick(this);
+            }
+        }
+    }
     bool CustomButton::Downed() const
     {
         return m_downed;
