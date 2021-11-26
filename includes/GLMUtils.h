@@ -237,4 +237,43 @@ namespace glm {
         if (a > cPI) a -= 2 * cPI;
         return a;
     }
+
+    inline float cross2d(const glm::vec2& v1, const glm::vec2& v2) {
+        return v1.x * v2.y - v1.y * v2.x;
+    }
+
+    inline float PtLineDistance2(const glm::vec2& line_pt, const glm::vec2& line_dir, const glm::vec2& pt) {
+        glm::vec2 pt_dir = pt - line_pt;
+        float s = cross2d(line_dir, pt_dir);
+        return s * s / glm::length2(line_dir);
+    }
+
+    inline float PtSegmentDistance2(const glm::vec2& seg_pt1, const glm::vec2& seg_pt2, const glm::vec2& pt) {
+        glm::vec2 line_dir = seg_pt2 - seg_pt1;
+        glm::vec2 dir1 = pt - seg_pt1;
+        glm::vec2 dir2 = pt - seg_pt2;
+        if (dot(line_dir, dir1) < 0) {
+            return glm::length2(dir1);
+        }
+        if (dot(line_dir, dir2) > 0) {
+            return glm::length2(dir2);
+        }
+        return PtLineDistance2(seg_pt1, line_dir, pt);
+    }
+
+    inline float SegmentSegmentDistance2(const glm::vec2& seg1_pt1, const glm::vec2& seg1_pt2, const glm::vec2& seg2_pt1, const glm::vec2& seg2_pt2) {
+        glm::vec2 dir1 = seg1_pt2 - seg1_pt1;
+        glm::vec2 dir2 = seg2_pt2 - seg2_pt1;
+        float s0 = cross2d(dir1, seg2_pt1 - seg1_pt1);
+        float s1 = cross2d(dir1, seg2_pt2 - seg1_pt1);
+        float s2 = cross2d(dir2, seg1_pt1 - seg2_pt1);
+        float s3 = cross2d(dir2, seg1_pt2 - seg2_pt1);
+        if ((s0 * s1 <= 0) && (s2 * s3 <= 0)) return 0; //intersect case
+
+        float d0 = PtSegmentDistance2(seg1_pt1, seg1_pt2, seg2_pt1);
+        float d1 = PtSegmentDistance2(seg1_pt1, seg1_pt2, seg2_pt2);
+        float d2 = PtSegmentDistance2(seg2_pt1, seg2_pt2, seg1_pt1);
+        float d3 = PtSegmentDistance2(seg2_pt1, seg2_pt2, seg1_pt2);
+        return glm::min(glm::min(d0, d1), glm::min(d2, d3));
+    }
 }
