@@ -181,8 +181,6 @@ namespace RA {
     class CustomControl : public Control {
     protected:
         CanvasPtr m_canvas;
-        bool m_moved;
-        bool m_focused;        
     protected:
         bool m_invalidate_on_move;
         bool m_invalidate_on_focus;

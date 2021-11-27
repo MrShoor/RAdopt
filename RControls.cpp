@@ -380,11 +380,15 @@ namespace RA {
     }
     bool CustomControl::Moved()
     {
-        return m_moved;
+        ControlGlobal* g = Global();
+        if (!g) return false;
+        return g->Moved() == this;
     }
     bool CustomControl::Focused()
     {
-        return m_focused;
+        ControlGlobal* g = Global();
+        if (!g) return false;
+        return g->Focused() == this;
     }
     void CustomButton::HitTestLocal(const glm::vec2& local_pt, Control*& hit_control)
     {

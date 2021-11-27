@@ -500,10 +500,10 @@ namespace RA {
             }
             m_line_info.glyphs.y = int(m_glyphs.size());
             m_line_info.ypos = m_pos.y + m_line_info.yymetrics.x + m_line_info.yymetrics.y;
-            m_lines.push_back(std::move(m_line_info));
-            m_line_yyyy_metrics.clear();
-
             m_pos.y += m_line_info.yymetrics.x + m_line_info.yymetrics.y;
+            m_lines.push_back(std::move(m_line_info));
+            m_line_info.yymetrics = { 0,0 };
+            m_line_yyyy_metrics.clear();
         }
         m_pos.x = 0;
         m_line_inited = false;
