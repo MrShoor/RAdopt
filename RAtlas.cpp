@@ -110,11 +110,16 @@ namespace RA {
         else {
             if (sprite.lock()) return nullptr;
             glm::ivec2 size = img->Size();
+            size.x += 2 * cSpritesBorderSize;
+            size.y += 2 * cSpritesBorderSize;
             if ((size.x > rect.z) || (size.y > rect.w)) return nullptr;
 
             if ((size.x == rect.z) && (size.y == rect.w)) {
                 sprite = img;
-                img->m_rect = rect;
+                img->m_rect.x = rect.x + cSpritesBorderSize;
+                img->m_rect.y = rect.y + cSpritesBorderSize;
+                img->m_rect.z = rect.z - 2 * cSpritesBorderSize;
+                img->m_rect.w = rect.w - 2 * cSpritesBorderSize;
                 return this;
             }
 
@@ -159,11 +164,41 @@ namespace RA {
         }
         for (const auto& it : m_invalid_sprites) {
             assert(static_cast<AtlasSprite*>(it)->m_data->Fmt() == m_tex->Format());
-            m_tex->SetSubData(it->Pos(), it->Size(), it->Slice(), 0, static_cast<AtlasSprite*>(it)->m_data->Data());
+            AtlasSprite* sprite = static_cast<AtlasSprite*>(it);
+            glm::ivec2 ssize = sprite->Size();
+            m_tex->SetSubData(sprite->Pos(), ssize, sprite->Slice(), 0, sprite->m_data->Data());
+
+            //horizontal
+            const void* pix = sprite->m_data->Pixel(0, ssize.y - 1);
+            m_tex->SetSubData(sprite->Pos() - glm::ivec2(0, 1), { ssize.x, 1}, sprite->Slice(), 0, pix);
+            pix = sprite->m_data->Pixel(0, 0);
+            m_tex->SetSubData(sprite->Pos() + glm::ivec2(0, ssize.y), { ssize.x, 1 }, sprite->Slice(), 0, pix);
+
+            //verticals
+            int pix_size = PixelsSize(m_tex->Format());
+            std::vector<char> column;
+            column.reserve(size_t((ssize.y + 2) * pix_size));
+            auto PushPixel = [&column, &pix_size](const char* pix) {
+                for (int i = 0; i < pix_size; i++) column.push_back(pix[i]);
+            };
+
+            int x = ssize.x - 1;
+            PushPixel(static_cast<const char*>(sprite->m_data->Pixel(x, ssize.y - 1)));
+            for (int i = 0; i < ssize.y; i++)
+                PushPixel(static_cast<const char*>(sprite->m_data->Pixel(x, i)));
+            PushPixel(static_cast<const char*>(sprite->m_data->Pixel(x, 0)));
+            m_tex->SetSubData(sprite->Pos() - glm::ivec2(1, 1), { 1, ssize.y+2 }, sprite->Slice(), 0, column.data());
+
+            column.clear();
+            PushPixel(static_cast<const char*>(sprite->m_data->Pixel(0, ssize.y - 1)));
+            for (int i = 0; i < ssize.y; i++)
+                PushPixel(static_cast<const char*>(sprite->m_data->Pixel(0, i)));
+            PushPixel(static_cast<const char*>(sprite->m_data->Pixel(0, 0)));
+            m_tex->SetSubData(sprite->Pos() + glm::ivec2(ssize.x, -1), { 1, ssize.y + 2 }, sprite->Slice(), 0, column.data());
         }
         m_invalid_sprites.clear();
     }
-    Atlas::Atlas(const DevicePtr& dev) : Atlas(dev, { 1024, 1024 })
+    Atlas::Atlas(const DevicePtr& dev) : Atlas(dev, { 2048, 2048 })
     {
     }
     Atlas::Atlas(const DevicePtr& dev, const glm::ivec2& atlas_size) : BaseAtlas(dev)

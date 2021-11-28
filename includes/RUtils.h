@@ -101,6 +101,7 @@ namespace RA {
         virtual TextureFmt Fmt() const = 0;
         virtual const void* Data() const = 0;
         virtual glm::ivec2 Size() const = 0;
+        virtual const void* Pixel(int x, int y) const = 0;
     };
     class TexManagerIntf {
     public:

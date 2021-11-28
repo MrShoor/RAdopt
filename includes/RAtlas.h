@@ -20,6 +20,7 @@ namespace RA {
     class BaseAtlas {
         friend class BaseAtlasSprite;        
     public:
+        static constexpr int cSpritesBorderSize = 1;
         struct Node {
             std::unique_ptr<Node> child[2];
             glm::ivec4 rect;

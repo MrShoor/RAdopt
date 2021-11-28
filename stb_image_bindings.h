@@ -15,6 +15,7 @@ namespace RA {
         TextureFmt Fmt() const override;
         const void* Data() const override;
         glm::ivec2 Size() const override;
+        const void* Pixel(int x, int y) const override;
 
         STB_TexData(const fs::path& filename);
         ~STB_TexData();

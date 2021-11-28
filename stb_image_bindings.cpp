@@ -27,6 +27,14 @@ namespace RA {
 	{
 		return m_size;
 	}
+	const void* STB_TexData::Pixel(int x, int y) const
+	{
+		if (x < 0) return nullptr;
+		if (y < 0) return nullptr;
+		if (x >= m_size.x) return nullptr;
+		if (y >= m_size.y) return nullptr;
+		return &m_data[(y * m_size.x + x) * 4];
+	}
 	STB_TexData::STB_TexData(const fs::path& filename)
 	{
 		//stbi_is_hdr - check for floating point format
