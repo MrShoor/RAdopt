@@ -146,6 +146,7 @@ namespace RA {
                        );
 
         void AddLine(const glm::vec2& pt1, const glm::vec2& pt2);
+        void AddRectangle(const glm::AABR& rect);
         void AddRectangle(const glm::vec4& bounds);
         void AddFillRect(const glm::vec4& bounds);
 

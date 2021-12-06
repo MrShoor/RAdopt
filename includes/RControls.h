@@ -16,13 +16,13 @@ namespace RA {
         Control* m_focused;
 
         bool m_in_drag[5] = { false, false, false, false, false };
-        glm::vec2 m_drag_point[5];
+        glm::vec2 m_drag_point[5] = { {0,0},{0,0},{0,0},{0,0},{0,0} };
 
         std::unique_ptr<Control> m_root;
 
         std::vector<Control*> m_ups_subs;
 
-        uint64_t m_last_time;
+        uint64_t m_last_time = 0;
         RA::QPC m_timer;
 
         Control* UpdateMovedState(const glm::vec2& pt);
@@ -83,6 +83,8 @@ namespace RA {
         DevicePtr Device();
         ControlGlobal* Global();
     protected:
+        virtual void AlignChilds() {};
+
         virtual void Notify_ChildVisibleChanged(Control* ACurrentChild) {};
 
         virtual void Notify_RootChanged();
@@ -185,7 +187,12 @@ namespace RA {
         bool m_invalidate_on_move;
         bool m_invalidate_on_focus;
     protected:
+        void PrepareCanvas();
         void DoValidate() override;
+        void Notify_MouseEnter() override;
+        void Notify_MouseLeave() override;
+        void Notify_FocusSet() override;
+        void Notify_FocusLost() override;
         void DrawControl(const glm::mat3& transform, CameraBase* camera) override;
     public:
         Canvas* Canvas();
@@ -203,16 +210,29 @@ namespace RA {
     protected:
         bool m_downed;
         std::wstring m_text;
-        std::function<void(Control*)> m_onclick;
+        std::function<void(CustomButton*)> m_onclick;
     protected:
         void HitTestLocal(const glm::vec2& local_pt, Control*& hit_control) override;
         void Notify_MouseDown(int btn, const glm::vec2& pt, const ShiftState& shifts) override;
         void Notify_MouseUp(int btn, const glm::vec2& pt, const ShiftState& shifts) override;
+        virtual void DoOnClick();
     public:
         bool Downed() const;
         std::wstring Text() const;
         void SetText(std::wstring text);
 
-        void Set_OnClick(const std::function<void(Control*)>& callback);
+        void Set_OnClick(const std::function<void(CustomButton*)>& callback);
+
+        CustomButton();
     };
+
+    void GridAlign_FixedSize(
+        const std::vector<Control*>& controls,
+        const glm::AABR& item_box,
+        const glm::vec2& min_step,
+        float preferred_y_step,
+        bool force_fit_y,
+        glm::vec2& grid_step,
+        glm::vec2& grid_size
+    );
 }

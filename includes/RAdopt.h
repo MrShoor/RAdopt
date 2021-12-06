@@ -18,7 +18,7 @@ namespace RA {
     uint32_t MurmurHash2(const void* key, int len, uint32_t seed = 0x9747b28c);
 
     enum class TextureFmt { None,
-                            R8, RG8, RGBA8, 
+                            R8, RG8, RGBA8, RGBA8_SRGB,
                             R16, RG16, RGBA16, 
                             R16f, RG16f, RGBA16f, 
                             R32, RG32, RGB32, RGBA32, 
@@ -186,14 +186,17 @@ namespace RA {
 
         std::unique_ptr<States> m_states;
 
+        bool m_srgb;
+
         std::unordered_map<Sampler, ComPtr<ID3D11SamplerState>, Sampler> m_samplers;
         ID3D11SamplerState* ObtainSampler(const Sampler& s);
         void SetDefaultFBO();
         void SetViewport(const glm::vec2& size);
     public:
-        Device(HWND wnd);
+        Device(HWND wnd, bool sRGB);
         ~Device(){}
     public:
+        bool SRGB() const;
         HWND Window() const;
         FrameBufferPtr SetFrameBuffer(const FrameBufferPtr& fbo, bool update_viewport = true);
         glm::ivec2 CurrentFrameBufferSize() const;
@@ -265,7 +268,7 @@ namespace RA {
         glm::ivec2 Size() const;
         int SlicesCount() const;
         int MipsCount() const;
-        void SetState(TextureFmt fmt);
+        void SetState(TextureFmt fmt, int mip_levels = 0);
         void SetState(TextureFmt fmt, glm::ivec2 size, int mip_levels = 0, int slices = 1, const void* data = nullptr);
         void SetSubData(const glm::ivec2& offset, const glm::ivec2& size, int slice, int mip, const void* data);
         void GenerateMips();
@@ -581,8 +584,8 @@ namespace RA {
     class FrameBufferBuilderIntf {
     public:
         virtual FrameBufferBuilderIntf* Reset(const DevicePtr& dev) = 0;
-        virtual FrameBufferBuilderIntf* Color(TextureFmt fmt) = 0;
-        virtual FrameBufferBuilderIntf* Depth(TextureFmt fmt) = 0;
+        virtual FrameBufferBuilderIntf* Color(TextureFmt fmt, int mips_count = 0) = 0;
+        virtual FrameBufferBuilderIntf* Depth(TextureFmt fmt, int mips_count = 0) = 0;
         virtual FrameBufferPtr Finish() = 0;
     };
     FrameBufferBuilderIntf* FBB(const DevicePtr& dev);

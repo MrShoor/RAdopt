@@ -5,16 +5,38 @@
 #include "stb_image.h"
 
 namespace RA {
-    TexDataIntf* STB_TexManager::Load(const fs::path& filename)
+	STB_TexManager::ImageKey STB_TexManager::BuildKey(const fs::path& filename, bool premultiply)
+	{
+		ImageKey k;
+		k.fname = filename;
+		k.premultiply = premultiply;
+		return k;
+	}
+	TexDataIntf* STB_TexManager::Load(const fs::path& filename, bool premultiply)
     {
-		fs::path p = std::filesystem::absolute(filename);
-		auto it = m_cache.find(p);
+		ImageKey k = BuildKey(std::filesystem::absolute(filename), premultiply);
+		auto it = m_cache.find(k);
 		if (it == m_cache.end()) {
-			m_cache.insert({ p, std::make_unique<STB_TexData>(p) });
-			it = m_cache.find(p);
+			it = m_cache.insert({ std::move(k), std::make_unique<STB_TexData>(k.fname) }).first;
+			if (premultiply) {
+				it->second->DoPremultiply();
+			}
 		}
 		return it->second.get();
     }
+	void STB_TexData::DoPremultiply()
+	{
+		int n = m_size.x * m_size.y;
+		//glm::u8vec4* c = static_cast<glm::u8vec4*>(m_data);
+		glm::u8vec4* c = (glm::u8vec4*)m_data;
+		for (int i = 0; i < n; i++) {
+			float a = c->w / 255.0f;
+			c->x = int(glm::round(float(c->x) * a));
+			c->y = int(glm::round(float(c->y) * a));
+			c->z = int(glm::round(float(c->z) * a));
+			c++;
+		}
+	}
 	TextureFmt STB_TexData::Fmt() const
 	{
 		return TextureFmt::RGBA8;

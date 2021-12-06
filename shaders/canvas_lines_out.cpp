@@ -52,5 +52,6 @@ struct PS_Output {
 PS_Output PS(VS_Output In) {
     PS_Output res;
     res.color = In.color;
+    res.color.xyz *= res.color.a;
     return res;
 }

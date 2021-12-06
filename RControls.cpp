@@ -174,7 +174,7 @@ namespace RA {
         if (curr_global) {
             if (curr_global->m_moved == this) curr_global->m_moved = nullptr;
             if (curr_global->m_focused == this) curr_global->m_focused = nullptr;
-            if (curr_global->m_captured == this) curr_global->m_captured = nullptr;
+            if (curr_global->m_captured == this) curr_global->SetCaptured(nullptr);
             m_cglobal = nullptr;
         }
 
@@ -220,6 +220,7 @@ namespace RA {
             for (auto c : m_childs) {
                 c->Notify_ParentSizeChanged();
             }
+            AlignChilds();
             Invalidate();
         }
     }
@@ -361,13 +362,36 @@ namespace RA {
     {
         SetParent(nullptr);
     }
-    void CustomControl::DoValidate()
+    void CustomControl::PrepareCanvas()
     {
         if (!m_canvas) {
-            m_canvas = std::make_shared<RA::Canvas>(*Global()->CanvasCommon().get());
+            auto g = Global();
+            if (!g) return;
+            m_canvas = std::make_shared<RA::Canvas>(*g->CanvasCommon().get());
         }
+    }
+    void CustomControl::DoValidate()
+    {
+        PrepareCanvas();
         Control::DoValidate();
         m_canvas->Clear();
+    }
+    void CustomControl::Notify_MouseEnter()
+    {
+        if (m_invalidate_on_move) Invalidate();
+    }
+    void CustomControl::Notify_MouseLeave()
+    {
+        if (m_invalidate_on_move) Invalidate();
+    }
+    void CustomControl::Notify_FocusSet()
+    {
+        Control::Notify_FocusSet();
+        if (m_invalidate_on_focus) Invalidate();
+    }
+    void CustomControl::Notify_FocusLost()
+    {
+        if (m_invalidate_on_focus) Invalidate();
     }
     void CustomControl::DrawControl(const glm::mat3& transform, CameraBase* camera)
     {
@@ -398,17 +422,24 @@ namespace RA {
     {
         CustomControl::Notify_MouseDown(btn, pt, shifts);
         m_downed = true;
+        Invalidate();
     }
     void CustomButton::Notify_MouseUp(int btn, const glm::vec2& pt, const ShiftState& shifts)
     {
         CustomControl::Notify_MouseUp(btn, pt, shifts);
         if (!m_downed) return;
+        m_downed = false;
         Control* ctrl;
         HitTestLocal(pt, ctrl);
         if (ctrl == this) {
-            if (m_onclick) {
-                m_onclick(this);
-            }
+            DoOnClick();
+        }
+        Invalidate();
+    }
+    void CustomButton::DoOnClick()
+    {
+        if (m_onclick) {
+            m_onclick(this);
         }
     }
     bool CustomButton::Downed() const
@@ -423,9 +454,13 @@ namespace RA {
     {
         m_text = std::move(text);
     }
-    void CustomButton::Set_OnClick(const std::function<void(Control*)>& callback)
+    void CustomButton::Set_OnClick(const std::function<void(CustomButton*)>& callback)
     {
         m_onclick = callback;
+    }
+    CustomButton::CustomButton()
+    {
+        m_invalidate_on_move = true;
     }
     ControlGlobal::ControlGlobal(const CanvasCommonObjectPtr& canvas_common) :
         m_root(std::make_unique<Control>()), 
@@ -599,6 +634,46 @@ namespace RA {
         if (dt > 0) {
             for (int i = int(m_ups_subs.size()) - 1; i >= 0; i--) {
                 m_ups_subs[i]->OnUPS(dt);
+            }
+        }
+    }
+    void GridAlign_FixedSize(
+        const std::vector<Control*>& controls, 
+        const glm::AABR& item_box, 
+        const glm::vec2& min_step,
+        float preferred_y_step,
+        bool force_fit_y,
+        glm::vec2& grid_step,
+        glm::vec2& grid_size)
+    {
+        int num_controls = int(controls.size());
+        if (num_controls == 0) {
+            grid_size = { 0,0 };
+            grid_step = { 0,0 };
+            return;
+        }
+        glm::vec2 box_size = item_box.Size();
+        box_size = glm::max(box_size, glm::vec2(0));
+        int num_col = int(glm::floor((box_size.x / min_step.x)) + 1);
+        int num_row = (num_controls + num_col - 1) / num_col;
+        grid_step.x = (num_col == 1) ? 0 : box_size.x / float(num_col - 1);
+        if (num_row == 1)
+            grid_step.y = 0;
+        else
+            grid_step.y = box_size.y / float(num_row - 1);
+        if (!force_fit_y) {
+            grid_step.y = glm::max(grid_step.y, min_step.y);
+        }
+        grid_step.y = glm::min(grid_step.y, preferred_y_step);
+        grid_size = grid_step * glm::vec2(num_col - 1, num_row - 1);
+        int n = 0;
+        glm::vec2 start_xy = item_box.min;
+        if (num_col == 1) start_xy.x = item_box.Center().x * 0.5f;
+        for (int y = 0; y < num_row; y++) {
+            for (int x = 0; x < num_col; x++) {
+                controls[n]->SetPos(item_box.min + grid_step * glm::vec2(x, y));
+                n++;
+                if (n == num_controls) return;
             }
         }
     }

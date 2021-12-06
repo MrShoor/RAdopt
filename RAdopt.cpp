@@ -46,6 +46,7 @@ namespace RA {
         case TextureFmt::R8: return 1;
         case TextureFmt::RG8: return 2;
         case TextureFmt::RGBA8: return 4;
+        case TextureFmt::RGBA8_SRGB: return 4;
         case TextureFmt::R16: return 2;
         case TextureFmt::RG16: return 4;
         case TextureFmt::RGBA16: return 8;
@@ -130,16 +131,16 @@ namespace RA {
             slot = 0;
             return this;
         }
-        FrameBufferBuilderIntf* Color(TextureFmt fmt) override {
+        FrameBufferBuilderIntf* Color(TextureFmt fmt, int mips_count = 0) override {
             Texture2DPtr new_tex = std::make_shared<Texture2D>(m_new_fbo->GetDevice());
-            new_tex->SetState(fmt);
+            new_tex->SetState(fmt, mips_count);
             m_new_fbo->SetSlot(slot, new_tex);
             slot++;
             return this;
         }
-        FrameBufferBuilderIntf* Depth(TextureFmt fmt) override {
+        FrameBufferBuilderIntf* Depth(TextureFmt fmt, int mips_count = 0) override {
             Texture2DPtr new_tex = std::make_shared<Texture2D>(m_new_fbo->GetDevice());
-            new_tex->SetState(fmt);
+            new_tex->SetState(fmt, mips_count);
             m_new_fbo->SetDS(new_tex);
             return this;
         };
@@ -501,8 +502,9 @@ namespace RA {
         vp.MaxDepth = 1.0;
         m_deviceContext->RSSetViewports(1, &vp);
     }
-    Device::Device(HWND wnd)
+    Device::Device(HWND wnd, bool sRGB)
     {
+        m_srgb = sRGB;
         m_active_program = nullptr;
 
         m_wnd = wnd;
@@ -516,7 +518,7 @@ namespace RA {
         sd.BufferCount = 1;
         sd.BufferDesc.Width = m_last_wnd_size.x;
         sd.BufferDesc.Height = m_last_wnd_size.y;
-        sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        sd.BufferDesc.Format = m_srgb ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB : DXGI_FORMAT_R8G8B8A8_UNORM;
         sd.BufferDesc.RefreshRate.Numerator = 60;
         sd.BufferDesc.RefreshRate.Denominator = 1;
         sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
@@ -544,6 +546,10 @@ namespace RA {
         CheckD3DErr(m_device->CreateRenderTargetView(m_backBuffer.Get(), nullptr, &m_RTView));
 
         m_states = std::make_unique<RA::States>(m_device.Get(), m_deviceContext.Get());
+    }
+    bool Device::SRGB() const
+    {
+        return m_srgb;
     }
     HWND Device::Window() const
     {
@@ -647,7 +653,7 @@ namespace RA {
             m_deviceContext->OMSetRenderTargetsAndUnorderedAccessViews(1, &tmp, nullptr, 0, 0, nullptr, nullptr);
             m_RTView = nullptr;
             m_backBuffer = nullptr;
-            CheckD3DErr(m_swapChain->ResizeBuffers(1, m_last_wnd_size.x, m_last_wnd_size.y, DXGI_FORMAT_R8G8B8A8_UNORM, 0));
+            CheckD3DErr(m_swapChain->ResizeBuffers(1, m_last_wnd_size.x, m_last_wnd_size.y, m_srgb ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB : DXGI_FORMAT_R8G8B8A8_UNORM, 0));
             CheckD3DErr(m_swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), &m_backBuffer));
             CheckD3DErr(m_device->CreateRenderTargetView(m_backBuffer.Get(), nullptr, &m_RTView));
         }
@@ -796,12 +802,12 @@ namespace RA {
     {
         return m_mips_count;
     }
-    void Texture2D::SetState(TextureFmt fmt)
+    void Texture2D::SetState(TextureFmt fmt, int mip_levels)
     {
         m_fmt = fmt;
         m_size = glm::ivec2(0, 0);
         m_slices = 0;
-        m_mips_count = 0;
+        m_mips_count = mip_levels;
         m_handle = nullptr;
         ClearResViews();
     }
@@ -1910,14 +1916,14 @@ namespace RA {
         for (int i = 0; i < D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT; i++) {
             if (!m_tex[i]) continue;
             if (m_tex[i]->Size() != xy) {
-                m_tex[i]->SetState(m_tex[i]->Format(), xy, 1, 1);
+                m_tex[i]->SetState(m_tex[i]->Format(), xy, m_tex[i]->MipsCount(), 1);
                 m_color_views[i] = nullptr;
                 m_colors_to_bind.clear();
             }
         }
         if (m_depth) {
             if (m_depth->Size() != xy) {
-                m_depth->SetState(m_depth->Format(), xy, 1, 1);
+                m_depth->SetState(m_depth->Format(), xy, m_depth->MipsCount(), 1);
                 m_depth_view = nullptr;
             }
         }

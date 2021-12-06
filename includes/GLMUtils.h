@@ -77,6 +77,13 @@ namespace glm {
             res.max = glm::min(max, box.max);
             return res;
         }
+        inline bool IsIntersects(const glm::AABR& box) const {
+            return
+                max.x > box.min.x &&
+                min.x < box.max.x &&
+                max.y > box.min.y &&
+                min.y < box.max.y;
+        }
         inline bool PtIn(const glm::vec2& pt) const {
             if (pt.x < min.x) return false;
             if (pt.y < min.y) return false;

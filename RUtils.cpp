@@ -345,11 +345,30 @@ namespace RA {
     RangeManagerIntfPtr Create_RangeManager(int size) {
         return std::make_unique<RangeManager>(size);
     }
-    uint64_t QPC::Time()
+    uint64_t QPC::Time() const
+    {        
+        if (m_paused) {
+            return (m_paused_time - m_start) * 1000 / m_freq;
+        }
+        else {
+            uint64_t tmp;
+            QueryPerformanceCounter((LARGE_INTEGER*)&tmp);
+            return (tmp - m_start) * 1000 / m_freq;
+        }
+    }
+    void QPC::Pause()
     {
-        uint64_t tmp;
-        QueryPerformanceCounter((LARGE_INTEGER*)&tmp);
-        return (tmp - m_start) * 1000 / m_freq;
+        if (m_paused) return;
+        m_paused = true;
+        QueryPerformanceCounter((LARGE_INTEGER*)&m_paused_time);
+    }
+    void QPC::Unpause()
+    {
+        if (!m_paused) return;
+        m_paused = false;
+        uint64_t t;
+        QueryPerformanceCounter((LARGE_INTEGER*)&t);
+        m_start += t - m_paused_time;
     }
     QPC::QPC()
     {

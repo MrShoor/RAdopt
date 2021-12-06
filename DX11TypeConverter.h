@@ -50,6 +50,7 @@ namespace RA {
         case TextureFmt::R8: return DXGI_FORMAT_R8_UNORM;
         case TextureFmt::RG8: return DXGI_FORMAT_R8G8_UNORM;
         case TextureFmt::RGBA8: return DXGI_FORMAT_R8G8B8A8_UNORM;
+        case TextureFmt::RGBA8_SRGB: return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
         case TextureFmt::R16: return DXGI_FORMAT_R16_UNORM;
         case TextureFmt::RG16: return DXGI_FORMAT_R16G16_UNORM;
         case TextureFmt::RGBA16: return DXGI_FORMAT_R16G16B16A16_UNORM;
@@ -79,6 +80,7 @@ namespace RA {
         case TextureFmt::R8: return DXGI_FORMAT_R8_UNORM;
         case TextureFmt::RG8: return DXGI_FORMAT_R8G8_UNORM;
         case TextureFmt::RGBA8: return DXGI_FORMAT_R8G8B8A8_UNORM;
+        case TextureFmt::RGBA8_SRGB: return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
         case TextureFmt::R16: return DXGI_FORMAT_R16_UNORM;
         case TextureFmt::RG16: return DXGI_FORMAT_R16G16_UNORM;
         case TextureFmt::RGBA16: return DXGI_FORMAT_R16G16B16A16_UNORM;
@@ -111,6 +113,7 @@ namespace RA {
             (fmt == TextureFmt::R8) ||
             (fmt == TextureFmt::RG8) ||
             (fmt == TextureFmt::RGBA8) ||
+            (fmt == TextureFmt::RGBA8_SRGB) ||
             (fmt == TextureFmt::R16f) ||
             (fmt == TextureFmt::RG16f) ||
             (fmt == TextureFmt::RGBA16f) ||

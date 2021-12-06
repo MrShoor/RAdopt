@@ -200,9 +200,9 @@ namespace RA {
     {
         return m_device;
     }
-    RenderWindow::RenderWindow(std::wstring caption, bool isMainWindow) : Window(L"RenderWndClass", caption, isMainWindow)
+    RenderWindow::RenderWindow(std::wstring caption, bool isMainWindow, bool sRGB) : Window(L"RenderWndClass", caption, isMainWindow)
     {
-        m_device = std::make_shared<Device>(Handle());
+        m_device = std::make_shared<Device>(Handle(), sRGB);
     }
     void RenderWindow::RenderScene()
     {        
@@ -216,6 +216,7 @@ namespace RA {
         if (rct.bottom - rct.top <= 0) return;
 
         m_device->BeginFrame();
+        m_device->States()->SetBlend(true, RA::Blend::one, RA::Blend::inv_src_alpha);
         RenderScene();
         m_device->PresentToWnd();        
     }
@@ -297,7 +298,7 @@ namespace RA {
 
         m_fbo->BlitToDefaultFBO(0);
     }
-    UIRenderWindow::UIRenderWindow(std::wstring caption, bool isMainWindow) : RenderWindow(caption, isMainWindow)
+    UIRenderWindow::UIRenderWindow(std::wstring caption, bool isMainWindow, bool sRGB) : RenderWindow(caption, isMainWindow, sRGB)
     {
         m_canvas_common = std::make_shared<CanvasCommonObject>(m_device);
         m_control_global = std::make_unique<ControlGlobal>(m_canvas_common);
@@ -308,6 +309,6 @@ namespace RA {
 
         m_ui_camera = std::make_unique<UICamera>(m_device);
 
-        m_fbo = FBB(m_device)->Color(RA::TextureFmt::RGBA8)->Finish();
+        m_fbo = FBB(m_device)->Color(sRGB ? RA::TextureFmt::RGBA8_SRGB : RA::TextureFmt::RGBA8)->Finish();
     }
 }

@@ -105,7 +105,7 @@ namespace RA {
     };
     class TexManagerIntf {
     public:
-        virtual TexDataIntf* Load(const std::filesystem::path& filename) = 0;
+        virtual TexDataIntf* Load(const std::filesystem::path& filename, bool premultiply = true) = 0;
     };
     TexManagerIntf* TM();
 
@@ -177,8 +177,12 @@ namespace RA {
     private:
         uint64_t m_start;
         uint64_t m_freq;
+        bool m_paused = false;
+        uint64_t m_paused_time;
     public:
-        uint64_t Time();
+        uint64_t Time() const;
+        void Pause();
+        void Unpause();
         QPC();
     };
 

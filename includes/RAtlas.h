@@ -93,7 +93,7 @@ namespace RA {
         void ValidateTexture() override;
     public:
         Atlas(const DevicePtr& dev);
-        Atlas(const DevicePtr& dev, const glm::ivec2& atlas_size);
+        Atlas(const DevicePtr& dev, TextureFmt format, const glm::ivec2& atlas_size);
         AtlasSpritePtr ObtainSprite(const fs::path& filename);
     };
     using AtlasPtr = std::shared_ptr<Atlas>;

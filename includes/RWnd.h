@@ -44,7 +44,7 @@ namespace RA {
     public:
         const DevicePtr& GetDevice() const;
 
-        RenderWindow(std::wstring caption, bool isMainWindow);
+        RenderWindow(std::wstring caption, bool isMainWindow, bool sRGB);
         virtual void RenderScene();
         void Paint(bool* processed) override;
     };
@@ -68,7 +68,7 @@ namespace RA {
         void KeyUp(uint32_t vKey, bool duplicate) override;
         void WindowResized(const glm::ivec2& new_size) override;
         void RenderScene() override;
-        UIRenderWindow(std::wstring caption, bool isMainWindow);
+        UIRenderWindow(std::wstring caption, bool isMainWindow, bool sRGB);
     };
 
     void MessageLoop(const std::function<void()> idle_proc);

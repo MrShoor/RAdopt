@@ -208,11 +208,11 @@ namespace RA {
             for (int i = 0; i < 3; i++) {
                 int offset = i + j * 4;
                 m_tris.push_back(v[offset + 0]);
-                m_tris.push_back(v[offset + 1]);
                 m_tris.push_back(v[offset + 4]);
                 m_tris.push_back(v[offset + 1]);
+                m_tris.push_back(v[offset + 1]);
+                m_tris.push_back(v[offset + 4]);
                 m_tris.push_back(v[offset + 5]);
-                m_tris.push_back(v[offset + 4]);
             }
         }
 
@@ -251,6 +251,10 @@ namespace RA {
         m_lines_buf_valid = false;
 
         PushBatch(BatchKind::Lines, 1);
+    }
+    void Canvas::AddRectangle(const glm::AABR& rect)
+    {
+        AddRectangle(glm::vec4(rect.min, rect.max));
     }
     void Canvas::AddRectangle(const glm::vec4& bounds)
     {

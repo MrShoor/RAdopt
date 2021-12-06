@@ -70,5 +70,6 @@ PS_Output PS(VS_Output In) {
     PS_Output res;
     res.color = In.color;
     res.color.a *= saturate(0.5 - atlas.Sample(atlasSampler, float3(In.uv, In.slice_idx)).r + In.sdfoffset);
+    res.color.xyz *= res.color.a;
     return res;
 }

@@ -427,7 +427,7 @@ namespace RA {
             gv.sdfoffset = m_sdf_offset;
             gv.color = m_color;
 
-            gv.slice_idx = glyph->Index();
+            gv.slice_idx = glyph->Slice();
             gv.sprite_xy = glyph->Pos();
             gv.sprite_size = glyph->Size();
 

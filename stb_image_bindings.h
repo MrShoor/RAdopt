@@ -12,6 +12,8 @@ namespace RA {
         glm::ivec2 m_size;
         stbi_uc* m_data;
     public:
+        void DoPremultiply();
+
         TextureFmt Fmt() const override;
         const void* Data() const override;
         glm::ivec2 Size() const override;
@@ -23,14 +25,20 @@ namespace RA {
 
     class STB_TexManager : public TexManagerIntf {
     private:
-        struct path_hasher {
-            std::size_t operator()(const fs::path& path) const {
-                return fs::hash_value(path);
+        struct ImageKey {
+            fs::path fname;
+            bool premultiply;
+            bool operator==(const ImageKey& k) const {
+                return k.fname == fname && k.premultiply == premultiply;
+            }
+            std::size_t operator()(const ImageKey& k) const {
+                return fs::hash_value(k.fname) ^ std::hash<bool>()(k.premultiply);
             }
         };
     private:
-        std::unordered_map<fs::path, std::unique_ptr<STB_TexData>, path_hasher> m_cache;
+        std::unordered_map<ImageKey, std::unique_ptr<STB_TexData>, ImageKey> m_cache;
+        ImageKey BuildKey(const fs::path& filename, bool premultiply);
     public:
-        TexDataIntf* Load(const fs::path& filename) override;
+        TexDataIntf* Load(const fs::path& filename, bool premultiply = true) override;
     };
 }
