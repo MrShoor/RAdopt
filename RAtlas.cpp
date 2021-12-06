@@ -162,8 +162,8 @@ namespace RA {
                 m_invalid_sprites.insert(static_cast<AtlasSprite*>(s));
             }
         }
-        for (const auto& it : m_invalid_sprites) {
-            assert(static_cast<AtlasSprite*>(it)->m_data->Fmt() == m_tex->Format());
+        for (const auto& it : m_invalid_sprites) {            
+            assert(RA::PixelsSize(static_cast<AtlasSprite*>(it)->m_data->Fmt()) == RA::PixelsSize(m_tex->Format()));
             AtlasSprite* sprite = static_cast<AtlasSprite*>(it);
             glm::ivec2 ssize = sprite->Size();
             m_tex->SetSubData(sprite->Pos(), ssize, sprite->Slice(), 0, sprite->m_data->Data());

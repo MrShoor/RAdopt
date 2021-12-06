@@ -298,6 +298,12 @@ namespace RA {
 
         m_fbo->BlitToDefaultFBO(0);
     }
+    LRESULT UIRenderWindow::WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+    {
+        if (m_control_global)
+            m_control_global->Process_XInput();
+        return RenderWindow::WndProc(hwnd, uMsg, wParam, lParam);
+    }
     UIRenderWindow::UIRenderWindow(std::wstring caption, bool isMainWindow, bool sRGB) : RenderWindow(caption, isMainWindow, sRGB)
     {
         m_canvas_common = std::make_shared<CanvasCommonObject>(m_device);

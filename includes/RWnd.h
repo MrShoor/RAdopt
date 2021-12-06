@@ -68,6 +68,7 @@ namespace RA {
         void KeyUp(uint32_t vKey, bool duplicate) override;
         void WindowResized(const glm::ivec2& new_size) override;
         void RenderScene() override;
+        LRESULT WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) override;
         UIRenderWindow(std::wstring caption, bool isMainWindow, bool sRGB);
     };
 

@@ -2,12 +2,22 @@
 #include "RAdopt.h"
 #include "RCanvas.h"
 #include "RTypes.h"
+#include "xinput.h"
+#include <array>
 
 namespace RA {
     class Control;
 
+    static constexpr float cDeadZoneTolerance = 0.25f;
+
+    enum class InputKind { Keyboard, Gamepad };
+    enum class XInputKey { A, B, X, Y, RB, LB, Up, Down, Left, Right, Start, Back, LStick, RStick, 
+        LStickMoveRight, LStickMoveUp, LStickMoveLeft, LStickMoveDown, RStickMoveRight, RStickMoveUp, RStickMoveLeft, RStickMoveDown, LT, RT };
+    enum class XInputStick { LX, LY, RX, RY, LT, RT };
+
     class ControlGlobal {
         friend class Control;
+        static constexpr int64_t cXInputCheckDelay = 3000;
     private:
         CanvasCommonObjectPtr m_canvas_common;
 
@@ -25,9 +35,15 @@ namespace RA {
         uint64_t m_last_time = 0;
         RA::QPC m_timer;
 
+        InputKind m_last_input_kind = InputKind::Keyboard;
+
+        std::array<XINPUT_STATE, XUSER_MAX_COUNT> m_last_xinput;
+        std::array<int64_t, XUSER_MAX_COUNT> m_last_failed_time;
+
         Control* UpdateMovedState(const glm::vec2& pt);
 
         glm::vec2 ConvertEventCoord(Control* ctrl, const glm::vec2& pt);
+        void SetInputKind(InputKind new_kind);
     public:        
         DevicePtr Device();
 
@@ -40,6 +56,8 @@ namespace RA {
         Control* Moved() const;
         Control* Captured() const;
         Control* Focused() const;
+
+        InputKind LastInput() const;
 
         void SetCaptured(Control* ctrl);
         void SetFocused(Control* ctrl);
@@ -56,6 +74,7 @@ namespace RA {
         void Draw(CameraBase* camera);
         void UpdateStates();
         void UpdateStates(uint64_t dt);
+        void Process_XInput();
     };
 
     class Control {
@@ -123,6 +142,10 @@ namespace RA {
         virtual void Notify_MouseUp(int btn, const glm::vec2& pt, const ShiftState& shifts) {};
         virtual void Notify_MouseDblClick(int btn, const glm::vec2& pt, const ShiftState& shifts) {};
 
+        virtual void Notify_InputKindChanged(InputKind new_input_kind);
+        virtual void Notify_XInputStick(int pad, XInputStick stick, float new_pos) {};
+        virtual void Notify_XInputKey(int pad, XInputKey key, bool down) {};
+
         bool InDrag() const;
         virtual void Notify_DragStart(int btn, const glm::vec2& pt, const glm::vec2& drag_pt, const ShiftState& shifts) {};
         virtual void Notify_DragMove(int btn, const glm::vec2& pt, const glm::vec2& drag_pt, const ShiftState& shifts) {};
@@ -168,6 +191,8 @@ namespace RA {
         void SetFocus();
 
         void Invalidate();
+
+        void MoveFocusToSibling(const glm::ivec2& dir);
     public:
         glm::mat3 Transform();
         glm::mat3 TransformInv();
@@ -186,6 +211,8 @@ namespace RA {
     protected:
         bool m_invalidate_on_move;
         bool m_invalidate_on_focus;
+        bool m_focus_auto_gift = false;
+        virtual void TryGiftFocus(const glm::ivec2& dir);
     protected:
         void PrepareCanvas();
         void DoValidate() override;
@@ -193,6 +220,10 @@ namespace RA {
         void Notify_MouseLeave() override;
         void Notify_FocusSet() override;
         void Notify_FocusLost() override;
+
+        void Notify_KeyDown(uint32_t vKey, bool duplicate) override;
+        void Notify_XInputKey(int pad, XInputKey key, bool down) override;
+
         void DrawControl(const glm::mat3& transform, CameraBase* camera) override;
     public:
         Canvas* Canvas();
@@ -211,17 +242,22 @@ namespace RA {
         bool m_downed;
         std::wstring m_text;
         std::function<void(CustomButton*)> m_onclick;
+        std::function<void(CustomButton*)> m_onback;
     protected:
         void HitTestLocal(const glm::vec2& local_pt, Control*& hit_control) override;
         void Notify_MouseDown(int btn, const glm::vec2& pt, const ShiftState& shifts) override;
         void Notify_MouseUp(int btn, const glm::vec2& pt, const ShiftState& shifts) override;
+        void Notify_KeyDown(uint32_t vKey, bool duplicate) override;
+        void Notify_XInputKey(int pad, XInputKey key, bool down) override;
         virtual void DoOnClick();
+        virtual void DoOnBack();
     public:
         bool Downed() const;
         std::wstring Text() const;
         void SetText(std::wstring text);
 
         void Set_OnClick(const std::function<void(CustomButton*)>& callback);
+        void Set_OnBack(const std::function<void(CustomButton*)>& callback);
 
         CustomButton();
     };
