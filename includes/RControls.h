@@ -8,12 +8,16 @@
 namespace RA {
     class Control;
 
-    static constexpr float cDeadZoneTolerance = 0.25f;
+    static constexpr float cDeadZoneTolerance = 0.5f;
 
     enum class InputKind { Keyboard, Gamepad };
     enum class XInputKey { A, B, X, Y, RB, LB, Up, Down, Left, Right, Start, Back, LStick, RStick, 
         LStickMoveRight, LStickMoveUp, LStickMoveLeft, LStickMoveDown, RStickMoveRight, RStickMoveUp, RStickMoveLeft, RStickMoveDown, LT, RT };
     enum class XInputStick { LX, LY, RX, RY, LT, RT };
+
+    static constexpr XInputKey XInputKeyLow() { return XInputKey::A; };
+    static constexpr XInputKey XInputKeyHigh() { return XInputKey::RT; };
+    static constexpr int XInputKeyCount() { return int(XInputKeyHigh()) - int(XInputKeyLow()) + 1; };
 
     class ControlGlobal {
         friend class Control;
@@ -36,6 +40,8 @@ namespace RA {
         RA::QPC m_timer;
 
         InputKind m_last_input_kind = InputKind::Keyboard;
+        std::array<std::array<bool, XInputKeyCount()>, XUSER_MAX_COUNT> m_xinput_key_down;
+        std::array<std::array<float, XInputKeyCount()>, XUSER_MAX_COUNT> m_xinput_stick_pos;
 
         std::array<XINPUT_STATE, XUSER_MAX_COUNT> m_last_xinput;
         std::array<int64_t, XUSER_MAX_COUNT> m_last_failed_time;
@@ -74,7 +80,14 @@ namespace RA {
         void Draw(CameraBase* camera);
         void UpdateStates();
         void UpdateStates(uint64_t dt);
+
+        void Process_XInputStick(int pad, XInputStick stick, float new_pos);
+        void Process_XInputKey(int pad, XInputKey key, bool down);
         void Process_XInput();
+
+        int XInputPadsCount() const;
+        bool Is_XInputKeyDown(int pad, XInputKey key) const;
+        float XInputStickPos(int pad, XInputStick stick) const;
     };
 
     class Control {
@@ -133,7 +146,7 @@ namespace RA {
         glm::vec2 Space_RootControlToLocal(const glm::vec2& pt);
         glm::vec2 Space_LocalToRootControl(const glm::vec2& pt);
         glm::vec2 Space_LocalToParent(const glm::vec2& pt);
-    protected:
+    public:
         virtual void Notify_MouseEnter() {};
         virtual void Notify_MouseLeave() {};
         virtual void Notify_MouseMove(const glm::vec2& pt, const ShiftState& shifts) {};
@@ -247,7 +260,7 @@ namespace RA {
         void HitTestLocal(const glm::vec2& local_pt, Control*& hit_control) override;
         void Notify_MouseDown(int btn, const glm::vec2& pt, const ShiftState& shifts) override;
         void Notify_MouseUp(int btn, const glm::vec2& pt, const ShiftState& shifts) override;
-        void Notify_KeyDown(uint32_t vKey, bool duplicate) override;
+        void Notify_KeyUp(uint32_t vKey, bool duplicate) override;
         void Notify_XInputKey(int pad, XInputKey key, bool down) override;
         virtual void DoOnClick();
         virtual void DoOnBack();

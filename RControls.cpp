@@ -526,9 +526,9 @@ namespace RA {
         }
         Invalidate();
     }
-    void CustomButton::Notify_KeyDown(uint32_t vKey, bool duplicate)
+    void CustomButton::Notify_KeyUp(uint32_t vKey, bool duplicate)
     {
-        CustomControl::Notify_KeyDown(vKey, duplicate);
+        CustomControl::Notify_KeyUp(vKey, duplicate);
         if (vKey == VK_RETURN) {
             DoOnClick();
         }
@@ -539,10 +539,10 @@ namespace RA {
     void CustomButton::Notify_XInputKey(int pad, XInputKey key, bool down)
     {
         CustomControl::Notify_XInputKey(pad, key, down);
-        if (key == XInputKey::A) {
+        if (key == XInputKey::A && !down) {
             DoOnClick();
         }
-        if (key == XInputKey::B) {
+        if (key == XInputKey::B && !down) {
             DoOnBack();
         }
     }
@@ -595,6 +595,17 @@ namespace RA {
         }
         for (auto& t : m_last_failed_time) {
             t = -cXInputCheckDelay;
+        }
+
+        for (auto& pad : m_xinput_key_down) {
+            for (auto& key : pad) {
+                key = false;
+            }
+        }
+        for (auto& pad : m_xinput_stick_pos) {
+            for (auto& stick : pad) {
+                stick = 0.0f;
+            }
         }
     }
     Control* ControlGlobal::UpdateMovedState(const glm::vec2& pt)
@@ -775,6 +786,21 @@ namespace RA {
             }
         }
     }
+    void ControlGlobal::Process_XInputStick(int pad, XInputStick stick, float new_pos)
+    {
+        Control* c = Focused();
+        m_xinput_stick_pos[pad][int(stick)] = new_pos;
+        if (!c) return;
+        c->Notify_XInputStick(pad, stick, new_pos);
+    }
+    void ControlGlobal::Process_XInputKey(int pad, XInputKey key, bool down)
+    {
+        SetInputKind(InputKind::Gamepad);
+        m_xinput_key_down[pad][int(key)] = down;
+        Control* c = Focused();
+        if (!c) return;
+        c->Notify_XInputKey(pad, key, down);        
+    }
     void ControlGlobal::Process_XInput()
     {
         DWORD dwResult;
@@ -789,131 +815,119 @@ namespace RA {
             if (dwResult == ERROR_SUCCESS)
             {              
                 if (state.dwPacketNumber != m_last_xinput[i].dwPacketNumber) {
-                    Control* c = Focused();
-                    if (c) {
-                        auto StickToFloat = [](SHORT x) {
-                            return x < 0 ? float(x) / 32768.0f : float(x) / 32767.0f;
-                        };
-                        auto TriggerToFloat = [](BYTE b) {
-                            return float(b) / 255.0f;
-                        };
-                        auto KeyChanged = [](WORD btn_old, WORD btn_new, WORD mask, bool& down)->bool {
-                            WORD oldm = btn_old & mask;
-                            WORD newm = btn_new & mask;
-                            if (oldm == newm) return false;
-                            down = newm;
-                            return true;
-                        };
+                    auto StickToFloat = [](SHORT x) {
+                        return x < 0 ? float(x) / 32768.0f : float(x) / 32767.0f;
+                    };
+                    auto TriggerToFloat = [](BYTE b) {
+                        return float(b) / 255.0f;
+                    };
+                    auto KeyChanged = [](WORD btn_old, WORD btn_new, WORD mask, bool& down)->bool {
+                        WORD oldm = btn_old & mask;
+                        WORD newm = btn_new & mask;
+                        if (oldm == newm) return false;
+                        down = newm;
+                        return true;
+                    };
 
-                        if (m_last_xinput[i].Gamepad.bLeftTrigger != state.Gamepad.bLeftTrigger) {
-                            c->Notify_XInputStick(i, RA::XInputStick::LT, TriggerToFloat(state.Gamepad.bLeftTrigger));                            
-                            bool old_up = StickToFloat(m_last_xinput[i].Gamepad.bLeftTrigger) > cDeadZoneTolerance;
-                            bool new_up = StickToFloat(state.Gamepad.bLeftTrigger) > cDeadZoneTolerance;
-                            if (old_up != new_up) {
-                                c->Notify_XInputKey(i, RA::XInputKey::LT, new_up);
-                            }
-                        }
-                        if (m_last_xinput[i].Gamepad.bRightTrigger != state.Gamepad.bRightTrigger) {
-                            c->Notify_XInputStick(i, RA::XInputStick::RT, TriggerToFloat(state.Gamepad.bRightTrigger));
-                            bool old_up = StickToFloat(m_last_xinput[i].Gamepad.bRightTrigger) > cDeadZoneTolerance;
-                            bool new_up = StickToFloat(state.Gamepad.bRightTrigger) > cDeadZoneTolerance;
-                            if (old_up != new_up) {
-                                c->Notify_XInputKey(i, RA::XInputKey::RT, new_up);
-                            }
-                        }
-                        if (m_last_xinput[i].Gamepad.sThumbLX != state.Gamepad.sThumbLX) {
-                            c->Notify_XInputStick(i, RA::XInputStick::LX, StickToFloat(state.Gamepad.sThumbLX));
-                            bool old_up = StickToFloat(m_last_xinput[i].Gamepad.sThumbLX) > cDeadZoneTolerance;
-                            bool new_up = StickToFloat(state.Gamepad.sThumbLX) > cDeadZoneTolerance;
-                            if (old_up != new_up) {
-                                c->Notify_XInputKey(i, RA::XInputKey::LStickMoveRight, new_up);
-                            }
-                            bool old_down = StickToFloat(m_last_xinput[i].Gamepad.sThumbLX) < -cDeadZoneTolerance;
-                            bool new_down = StickToFloat(state.Gamepad.sThumbLX) < -cDeadZoneTolerance;
-                            if (old_down != new_down) {
-                                c->Notify_XInputKey(i, RA::XInputKey::LStickMoveLeft, new_down);
-                            }
-                        }
-                        if (m_last_xinput[i].Gamepad.sThumbLY != state.Gamepad.sThumbLY)
-                        {
-                            c->Notify_XInputStick(i, RA::XInputStick::LY, StickToFloat(state.Gamepad.sThumbLY));
-                            bool old_up = StickToFloat(m_last_xinput[i].Gamepad.sThumbLY) > cDeadZoneTolerance;
-                            bool new_up = StickToFloat(state.Gamepad.sThumbLY) > cDeadZoneTolerance;
-                            if (old_up != new_up) {
-                                c->Notify_XInputKey(i, RA::XInputKey::LStickMoveUp, new_up);
-                            }
-                            bool old_down = StickToFloat(m_last_xinput[i].Gamepad.sThumbLY) < -cDeadZoneTolerance;
-                            bool new_down = StickToFloat(state.Gamepad.sThumbLY) < -cDeadZoneTolerance;
-                            if (old_down != new_down) {
-                                c->Notify_XInputKey(i, RA::XInputKey::LStickMoveDown, new_down);
-                            }
-                        }
-                        if (m_last_xinput[i].Gamepad.sThumbRX != state.Gamepad.sThumbRX) {
-                            c->Notify_XInputStick(i, RA::XInputStick::RX, StickToFloat(state.Gamepad.sThumbRX));
-                            bool old_up = StickToFloat(m_last_xinput[i].Gamepad.sThumbRX) > cDeadZoneTolerance;
-                            bool new_up = StickToFloat(state.Gamepad.sThumbRX) > cDeadZoneTolerance;
-                            if (old_up != new_up) {
-                                c->Notify_XInputKey(i, RA::XInputKey::RStickMoveRight, new_up);
-                            }
-                            bool old_down = StickToFloat(m_last_xinput[i].Gamepad.sThumbRX) < -cDeadZoneTolerance;
-                            bool new_down = StickToFloat(state.Gamepad.sThumbRX) < -cDeadZoneTolerance;
-                            if (old_down != new_down) {
-                                c->Notify_XInputKey(i, RA::XInputKey::RStickMoveLeft, new_down);
-                            }
-                        }
-                        if (m_last_xinput[i].Gamepad.sThumbRY != state.Gamepad.sThumbRY) {
-                            c->Notify_XInputStick(i, RA::XInputStick::RY, StickToFloat(state.Gamepad.sThumbRY));
-                            bool old_up = StickToFloat(m_last_xinput[i].Gamepad.sThumbRY) > cDeadZoneTolerance;
-                            bool new_up = StickToFloat(state.Gamepad.sThumbRY) > cDeadZoneTolerance;
-                            if (old_up != new_up) {
-                                c->Notify_XInputKey(i, RA::XInputKey::RStickMoveUp, new_up);
-                            }
-                            bool old_down = StickToFloat(m_last_xinput[i].Gamepad.sThumbRY) < -cDeadZoneTolerance;
-                            bool new_down = StickToFloat(state.Gamepad.sThumbRY) < -cDeadZoneTolerance;
-                            if (old_down != new_down) {
-                                c->Notify_XInputKey(i, RA::XInputKey::RStickMoveDown, new_down);
-                            }
-                        }
-
-                        bool down;
-                        if (KeyChanged(m_last_xinput[i].Gamepad.wButtons, state.Gamepad.wButtons, XINPUT_GAMEPAD_DPAD_UP, down))
-                            c->Notify_XInputKey(i, RA::XInputKey::Up, down);
-                        if (KeyChanged(m_last_xinput[i].Gamepad.wButtons, state.Gamepad.wButtons, XINPUT_GAMEPAD_DPAD_DOWN, down))
-                            c->Notify_XInputKey(i, RA::XInputKey::Down, down);
-                        if (KeyChanged(m_last_xinput[i].Gamepad.wButtons, state.Gamepad.wButtons, XINPUT_GAMEPAD_DPAD_LEFT, down))
-                            c->Notify_XInputKey(i, RA::XInputKey::Left, down);
-                        if (KeyChanged(m_last_xinput[i].Gamepad.wButtons, state.Gamepad.wButtons, XINPUT_GAMEPAD_DPAD_RIGHT, down))
-                            c->Notify_XInputKey(i, RA::XInputKey::Right, down);
-                        if (KeyChanged(m_last_xinput[i].Gamepad.wButtons, state.Gamepad.wButtons, XINPUT_GAMEPAD_START, down))
-                            c->Notify_XInputKey(i, RA::XInputKey::Start, down);
-                        if (KeyChanged(m_last_xinput[i].Gamepad.wButtons, state.Gamepad.wButtons, XINPUT_GAMEPAD_BACK, down))
-                            c->Notify_XInputKey(i, RA::XInputKey::Back, down);
-                        if (KeyChanged(m_last_xinput[i].Gamepad.wButtons, state.Gamepad.wButtons, XINPUT_GAMEPAD_A, down))
-                            c->Notify_XInputKey(i, RA::XInputKey::A, down);           
-                        if (KeyChanged(m_last_xinput[i].Gamepad.wButtons, state.Gamepad.wButtons, XINPUT_GAMEPAD_B, down))
-                            c->Notify_XInputKey(i, RA::XInputKey::B, down);
-                        if (KeyChanged(m_last_xinput[i].Gamepad.wButtons, state.Gamepad.wButtons, XINPUT_GAMEPAD_X, down))
-                            c->Notify_XInputKey(i, RA::XInputKey::X, down);
-                        if (KeyChanged(m_last_xinput[i].Gamepad.wButtons, state.Gamepad.wButtons, XINPUT_GAMEPAD_Y, down))
-                            c->Notify_XInputKey(i, RA::XInputKey::Y, down);
-                        if (KeyChanged(m_last_xinput[i].Gamepad.wButtons, state.Gamepad.wButtons, XINPUT_GAMEPAD_LEFT_THUMB, down))
-                            c->Notify_XInputKey(i, RA::XInputKey::LStick, down);                            
-                        if (KeyChanged(m_last_xinput[i].Gamepad.wButtons, state.Gamepad.wButtons, XINPUT_GAMEPAD_RIGHT_THUMB, down))
-                            c->Notify_XInputKey(i, RA::XInputKey::RStick, down);
-                        if (KeyChanged(m_last_xinput[i].Gamepad.wButtons, state.Gamepad.wButtons, XINPUT_GAMEPAD_LEFT_SHOULDER, down))
-                            c->Notify_XInputKey(i, RA::XInputKey::LB, down);
-                        if (KeyChanged(m_last_xinput[i].Gamepad.wButtons, state.Gamepad.wButtons, XINPUT_GAMEPAD_RIGHT_SHOULDER, down))
-                            c->Notify_XInputKey(i, RA::XInputKey::RB, down);
+                    if (m_last_xinput[i].Gamepad.bLeftTrigger != state.Gamepad.bLeftTrigger) {
+                        Process_XInputStick(i, RA::XInputStick::LT, TriggerToFloat(state.Gamepad.bLeftTrigger));                            
+                        bool old_up = TriggerToFloat(m_last_xinput[i].Gamepad.bLeftTrigger) > cDeadZoneTolerance;
+                        bool new_up = TriggerToFloat(state.Gamepad.bLeftTrigger) > cDeadZoneTolerance;
+                        if (old_up != new_up) Process_XInputKey(i, RA::XInputKey::LT, new_up);
                     }
+                    if (m_last_xinput[i].Gamepad.bRightTrigger != state.Gamepad.bRightTrigger) {
+                        Process_XInputStick(i, RA::XInputStick::RT, TriggerToFloat(state.Gamepad.bRightTrigger));
+                        bool old_up = TriggerToFloat(m_last_xinput[i].Gamepad.bRightTrigger) > cDeadZoneTolerance;
+                        bool new_up = TriggerToFloat(state.Gamepad.bRightTrigger) > cDeadZoneTolerance;
+                        if (old_up != new_up) Process_XInputKey(i, RA::XInputKey::RT, new_up);
+                    }
+                    if (m_last_xinput[i].Gamepad.sThumbLX != state.Gamepad.sThumbLX) {
+                        Process_XInputStick(i, RA::XInputStick::LX, StickToFloat(state.Gamepad.sThumbLX));
+                        bool old_up = StickToFloat(m_last_xinput[i].Gamepad.sThumbLX) > cDeadZoneTolerance;
+                        bool new_up = StickToFloat(state.Gamepad.sThumbLX) > cDeadZoneTolerance;
+                        if (old_up != new_up) Process_XInputKey(i, RA::XInputKey::LStickMoveRight, new_up);
+                        bool old_down = StickToFloat(m_last_xinput[i].Gamepad.sThumbLX) < -cDeadZoneTolerance;
+                        bool new_down = StickToFloat(state.Gamepad.sThumbLX) < -cDeadZoneTolerance;
+                        if (old_down != new_down) Process_XInputKey(i, RA::XInputKey::LStickMoveLeft, new_down);
+                    }
+                    if (m_last_xinput[i].Gamepad.sThumbLY != state.Gamepad.sThumbLY)
+                    {
+                        Process_XInputStick(i, RA::XInputStick::LY, StickToFloat(state.Gamepad.sThumbLY));
+                        bool old_up = StickToFloat(m_last_xinput[i].Gamepad.sThumbLY) > cDeadZoneTolerance;
+                        bool new_up = StickToFloat(state.Gamepad.sThumbLY) > cDeadZoneTolerance;
+                        if (old_up != new_up) Process_XInputKey(i, RA::XInputKey::LStickMoveUp, new_up);
+                        bool old_down = StickToFloat(m_last_xinput[i].Gamepad.sThumbLY) < -cDeadZoneTolerance;
+                        bool new_down = StickToFloat(state.Gamepad.sThumbLY) < -cDeadZoneTolerance;
+                        if (old_down != new_down) Process_XInputKey(i, RA::XInputKey::LStickMoveDown, new_down);
+                    }
+                    if (m_last_xinput[i].Gamepad.sThumbRX != state.Gamepad.sThumbRX) {
+                        Process_XInputStick(i, RA::XInputStick::RX, StickToFloat(state.Gamepad.sThumbRX));
+                        bool old_up = StickToFloat(m_last_xinput[i].Gamepad.sThumbRX) > cDeadZoneTolerance;
+                        bool new_up = StickToFloat(state.Gamepad.sThumbRX) > cDeadZoneTolerance;
+                        if (old_up != new_up) Process_XInputKey(i, RA::XInputKey::RStickMoveRight, new_up);
+                        bool old_down = StickToFloat(m_last_xinput[i].Gamepad.sThumbRX) < -cDeadZoneTolerance;
+                        bool new_down = StickToFloat(state.Gamepad.sThumbRX) < -cDeadZoneTolerance;
+                        if (old_down != new_down) Process_XInputKey(i, RA::XInputKey::RStickMoveLeft, new_down);
+                    }
+                    if (m_last_xinput[i].Gamepad.sThumbRY != state.Gamepad.sThumbRY) {
+                        Process_XInputStick(i, RA::XInputStick::RY, StickToFloat(state.Gamepad.sThumbRY));
+                        bool old_up = StickToFloat(m_last_xinput[i].Gamepad.sThumbRY) > cDeadZoneTolerance;
+                        bool new_up = StickToFloat(state.Gamepad.sThumbRY) > cDeadZoneTolerance;
+                        if (old_up != new_up) Process_XInputKey(i, RA::XInputKey::RStickMoveUp, new_up);
+                        bool old_down = StickToFloat(m_last_xinput[i].Gamepad.sThumbRY) < -cDeadZoneTolerance;
+                        bool new_down = StickToFloat(state.Gamepad.sThumbRY) < -cDeadZoneTolerance;
+                        if (old_down != new_down) Process_XInputKey(i, RA::XInputKey::RStickMoveDown, new_down);
+                    }
+
+                    bool down;
+                    if (KeyChanged(m_last_xinput[i].Gamepad.wButtons, state.Gamepad.wButtons, XINPUT_GAMEPAD_DPAD_UP, down))
+                        Process_XInputKey(i, RA::XInputKey::Up, down);
+                    if (KeyChanged(m_last_xinput[i].Gamepad.wButtons, state.Gamepad.wButtons, XINPUT_GAMEPAD_DPAD_DOWN, down))
+                        Process_XInputKey(i, RA::XInputKey::Down, down);
+                    if (KeyChanged(m_last_xinput[i].Gamepad.wButtons, state.Gamepad.wButtons, XINPUT_GAMEPAD_DPAD_LEFT, down))
+                        Process_XInputKey(i, RA::XInputKey::Left, down);
+                    if (KeyChanged(m_last_xinput[i].Gamepad.wButtons, state.Gamepad.wButtons, XINPUT_GAMEPAD_DPAD_RIGHT, down))
+                        Process_XInputKey(i, RA::XInputKey::Right, down);
+                    if (KeyChanged(m_last_xinput[i].Gamepad.wButtons, state.Gamepad.wButtons, XINPUT_GAMEPAD_START, down))
+                        Process_XInputKey(i, RA::XInputKey::Start, down);
+                    if (KeyChanged(m_last_xinput[i].Gamepad.wButtons, state.Gamepad.wButtons, XINPUT_GAMEPAD_BACK, down))
+                        Process_XInputKey(i, RA::XInputKey::Back, down);
+                    if (KeyChanged(m_last_xinput[i].Gamepad.wButtons, state.Gamepad.wButtons, XINPUT_GAMEPAD_A, down))
+                        Process_XInputKey(i, RA::XInputKey::A, down);
+                    if (KeyChanged(m_last_xinput[i].Gamepad.wButtons, state.Gamepad.wButtons, XINPUT_GAMEPAD_B, down))
+                        Process_XInputKey(i, RA::XInputKey::B, down);
+                    if (KeyChanged(m_last_xinput[i].Gamepad.wButtons, state.Gamepad.wButtons, XINPUT_GAMEPAD_X, down))
+                        Process_XInputKey(i, RA::XInputKey::X, down);
+                    if (KeyChanged(m_last_xinput[i].Gamepad.wButtons, state.Gamepad.wButtons, XINPUT_GAMEPAD_Y, down))
+                        Process_XInputKey(i, RA::XInputKey::Y, down);
+                    if (KeyChanged(m_last_xinput[i].Gamepad.wButtons, state.Gamepad.wButtons, XINPUT_GAMEPAD_LEFT_THUMB, down))
+                        Process_XInputKey(i, RA::XInputKey::LStick, down);
+                    if (KeyChanged(m_last_xinput[i].Gamepad.wButtons, state.Gamepad.wButtons, XINPUT_GAMEPAD_RIGHT_THUMB, down))
+                        Process_XInputKey(i, RA::XInputKey::RStick, down);
+                    if (KeyChanged(m_last_xinput[i].Gamepad.wButtons, state.Gamepad.wButtons, XINPUT_GAMEPAD_LEFT_SHOULDER, down))
+                        Process_XInputKey(i, RA::XInputKey::LB, down);
+                    if (KeyChanged(m_last_xinput[i].Gamepad.wButtons, state.Gamepad.wButtons, XINPUT_GAMEPAD_RIGHT_SHOULDER, down))
+                        Process_XInputKey(i, RA::XInputKey::RB, down);
                 }
-                m_last_xinput[i] = state;
-                SetInputKind(InputKind::Gamepad);
+                m_last_xinput[i] = state;                
             }
             else
             {
                 m_last_failed_time[i] = curr_time;
             }
         }
+    }
+    int ControlGlobal::XInputPadsCount() const
+    {
+        return XUSER_MAX_COUNT;
+    }
+    bool ControlGlobal::Is_XInputKeyDown(int pad, XInputKey key) const
+    {
+        return m_xinput_key_down[pad][int(key)];
+    }
+    float ControlGlobal::XInputStickPos(int pad, XInputStick stick) const
+    {
+        return m_xinput_stick_pos[pad][int(stick)];
     }
     void GridAlign_FixedSize(
         const std::vector<Control*>& controls, 
