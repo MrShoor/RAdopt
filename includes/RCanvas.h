@@ -13,7 +13,10 @@ namespace RA {
         ProgramPtr m_lines_out_prog;
         Atlas_GlyphsSDFPtr m_glyphs_atlas;
         AtlasPtr m_sprite_atlas;
+        float m_dpi_scale = 1.0f;
     public:
+        float GetDPIScale() const;
+        void SetDPIScale(float scale);
         AtlasPtr GetAtlas() const;
         void Validate();
         DevicePtr Device();
@@ -94,6 +97,7 @@ namespace RA {
         Atlas_GlyphsSDFPtr m_glyphs_atlas;
         AtlasPtr m_sprite_atlas;
 
+        const CanvasCommonObject* m_canvas_common_object;
         ProgramPtr m_text_out_prog;
         ProgramPtr m_tris_out_prog;
         ProgramPtr m_lines_out_prog;
@@ -124,7 +128,7 @@ namespace RA {
         void InitProgram(BatchKind kind, CameraBase& camera, const glm::mat3& transform_2d);
     public:
         glm::vec3 GetPos();
-        void SetPos(const glm::vec3& pt);        
+        void SetPos(const glm::vec3& pt);
 
         Pen& Pen();
 

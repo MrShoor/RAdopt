@@ -13,6 +13,7 @@ struct VS_Input {
 float4x4 transform_2d;
 float3 pos3d;
 float2 view_pixel_size;
+float dpi_scale;
 
 struct VS_Output {
     float4 S_Position(pos);
@@ -36,7 +37,7 @@ VS_Output VS(VS_Input In) {
     float2 offset2d = mul(transform_2d, float4(crd, 0.0, 1.0)).xy;
     res.pos.xy += float2(offset2d.x, -offset2d.y);
     if (In.hinting) res.pos.xy = round(res.pos.xy);    
-    res.pos.xy += n * (In.vid % 2) * In.width.x;
+    res.pos.xy += n * (In.vid % 2) * In.width.x * dpi_scale;
     res.pos.xy *= view_pixel_size;
     res.pos.xy *= res.pos.w;
 

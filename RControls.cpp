@@ -127,6 +127,11 @@ namespace RA {
     void Control::OnUPS(uint64_t dt)
     {
     }
+    float Control::DPIScale()
+    {
+        auto g = Global();
+        return g ? g->GetDPIScale() : 1.0f;
+    }
     glm::vec2 Control::Space_ParentToLocal(const glm::vec2& pt)
     {
         if (m_parent) {
@@ -589,6 +594,7 @@ namespace RA {
         m_captured(nullptr),
         m_focused(nullptr)
     {
+        m_canvas_common->SetDPIScale(m_dpi_scale);
         m_root->m_cglobal = this;
         for (auto& xstate : m_last_xinput) {
             ZeroMemory(&xstate, sizeof(XINPUT_STATE));
@@ -607,6 +613,15 @@ namespace RA {
                 stick = 0.0f;
             }
         }
+    }
+    float ControlGlobal::GetDPIScale() const
+    {
+        return m_dpi_scale;
+    }
+    void ControlGlobal::SetDPIScale(float dpi_scale)
+    {
+        m_dpi_scale = dpi_scale;
+        m_canvas_common->SetDPIScale(dpi_scale);
     }
     Control* ControlGlobal::UpdateMovedState(const glm::vec2& pt)
     {
@@ -693,9 +708,10 @@ namespace RA {
             m_focused->Notify_FocusSet();
         } 
     }
-    void ControlGlobal::Process_MouseMove(const glm::vec2& pt, const ShiftState& shifts)
+    void ControlGlobal::Process_MouseMove(glm::vec2 pt, const ShiftState& shifts)
     {
-        Control* ctrl = UpdateMovedState(pt);        
+        pt *= GetDPIScale();
+        Control* ctrl = UpdateMovedState(pt);
         if (ctrl) {            
             if (Captured() == ctrl) {
                 for (int i = 0; i < 5; i++) {
@@ -715,13 +731,15 @@ namespace RA {
             ctrl->Notify_MouseMove(ConvertEventCoord(ctrl, pt), shifts);
         }        
     }
-    void ControlGlobal::Process_MouseWheel(const glm::vec2& pt, int delta, const ShiftState& shifts)
+    void ControlGlobal::Process_MouseWheel(glm::vec2 pt, int delta, const ShiftState& shifts)
     {
+        pt *= GetDPIScale();
         Control* m = UpdateMovedState(pt);
         if (m) m->Notify_MouseWheel(ConvertEventCoord(m, pt), delta, shifts);
     }
-    void ControlGlobal::Process_MouseDown(int btn, const glm::vec2& pt, const ShiftState& shifts)
+    void ControlGlobal::Process_MouseDown(int btn, glm::vec2 pt, const ShiftState& shifts)
     {
+        pt *= GetDPIScale();
         Control* m = UpdateMovedState(pt);
         if (m) {
             m->Notify_MouseDown(btn, ConvertEventCoord(m, pt), shifts);
@@ -735,8 +753,9 @@ namespace RA {
             SetFocused(nullptr);
         }
     }
-    void ControlGlobal::Process_MouseUp(int btn, const glm::vec2& pt, const ShiftState& shifts)
+    void ControlGlobal::Process_MouseUp(int btn, glm::vec2 pt, const ShiftState& shifts)
     {
+        pt *= GetDPIScale();
         Control* m = UpdateMovedState(pt);        
         if (m) {
             m->Notify_MouseUp(btn, ConvertEventCoord(m, pt), shifts);
@@ -750,8 +769,9 @@ namespace RA {
         }
         SetCaptured(nullptr);
     }
-    void ControlGlobal::Process_MouseDblClick(int btn, const glm::vec2& pt, const ShiftState& shifts)
+    void ControlGlobal::Process_MouseDblClick(int btn, glm::vec2 pt, const ShiftState& shifts)
     {
+        pt *= GetDPIScale();
         Control* m = UpdateMovedState(pt);
         if (m) m->Notify_MouseDblClick(btn, ConvertEventCoord(m, pt), shifts);
     }

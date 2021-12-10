@@ -56,8 +56,13 @@ namespace RA {
         std::unique_ptr<ControlGlobal> m_control_global;
         RA::FrameBufferPtr m_fbo;
 
+        float m_last_dpi_scale;
+
         virtual void ControlsDraw_After();
-        virtual void ControlsDraw_Before();        
+        virtual void ControlsDraw_Before();
+    protected:
+        void UpdateDPIScale();
+        virtual float GetDPIScale() const;
     public:
         void MouseMove(const glm::ivec2& crd, const ShiftState& ss) override;
         void MouseDown(int btn, const glm::ivec2& crd, const ShiftState& ss) override;

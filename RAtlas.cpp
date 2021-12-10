@@ -198,7 +198,7 @@ namespace RA {
         }
         m_invalid_sprites.clear();
     }
-    Atlas::Atlas(const DevicePtr& dev) : Atlas(dev, (dev->SRGB() ? TextureFmt::RGBA8_SRGB : TextureFmt::RGBA8), { 2048, 2048 })
+    Atlas::Atlas(const DevicePtr& dev) : Atlas(dev, (dev->SRGB() ? TextureFmt::RGBA8_SRGB : TextureFmt::RGBA8), { 4096, 4096 })
     {
     }
     Atlas::Atlas(const DevicePtr& dev, TextureFmt format, const glm::ivec2& atlas_size) : BaseAtlas(dev)

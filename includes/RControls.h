@@ -2,7 +2,9 @@
 #include "RAdopt.h"
 #include "RCanvas.h"
 #include "RTypes.h"
-#include "xinput.h"
+#include <winsdkver.h>
+#define _WIN32_WINNT 0x0601
+#include <xinput.h>
 #include <array>
 
 namespace RA {
@@ -50,11 +52,15 @@ namespace RA {
 
         glm::vec2 ConvertEventCoord(Control* ctrl, const glm::vec2& pt);
         void SetInputKind(InputKind new_kind);
+
+        float m_dpi_scale = 1.0f;
     public:        
         DevicePtr Device();
 
         ControlGlobal(const CanvasCommonObjectPtr& canvas_common);
 
+        float GetDPIScale() const;
+        void SetDPIScale(float dpi_scale);
         CanvasCommonObjectPtr CanvasCommon();
 
         Control* Root() const;
@@ -68,11 +74,11 @@ namespace RA {
         void SetCaptured(Control* ctrl);
         void SetFocused(Control* ctrl);
 
-        void Process_MouseMove(const glm::vec2& pt, const ShiftState& shifts);
-        void Process_MouseWheel(const glm::vec2& pt, int delta, const ShiftState& shifts);
-        void Process_MouseDown(int btn, const glm::vec2& pt, const ShiftState& shifts);
-        void Process_MouseUp(int btn, const glm::vec2& pt, const ShiftState& shifts);
-        void Process_MouseDblClick(int btn, const glm::vec2& pt, const ShiftState& shifts);
+        void Process_MouseMove(glm::vec2 pt, const ShiftState& shifts);
+        void Process_MouseWheel(glm::vec2 pt, int delta, const ShiftState& shifts);
+        void Process_MouseDown(int btn, glm::vec2 pt, const ShiftState& shifts);
+        void Process_MouseUp(int btn, glm::vec2 pt, const ShiftState& shifts);
+        void Process_MouseDblClick(int btn, glm::vec2 pt, const ShiftState& shifts);
 
         void Process_KeyDown(uint32_t vKey, bool duplicate);
         void Process_KeyUp(uint32_t vKey, bool duplicate);
@@ -141,6 +147,7 @@ namespace RA {
         void UPSSubscribe();
         void UPSUnsubscribe();
         virtual void OnUPS(uint64_t dt);
+        float DPIScale();
     public:
         glm::vec2 Space_ParentToLocal(const glm::vec2& pt);
         glm::vec2 Space_RootControlToLocal(const glm::vec2& pt);

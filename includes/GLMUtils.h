@@ -283,4 +283,15 @@ namespace glm {
         float d3 = PtSegmentDistance2(seg2_pt1, seg2_pt2, seg1_pt2);
         return glm::min(glm::min(d0, d1), glm::min(d2, d3));
     }
+
+    inline glm::vec3 HUEtoRGB(float h) {
+        glm::vec3 res = {
+            glm::abs(h * 6.0f - 3.0f) - 1.0f,
+            2.0f - glm::abs(h * 6.0f - 2.0f),
+            2.0f - glm::abs(h * 6.0f - 4.0f),
+        };
+        return glm::clamp(res, 0.0f, 1.0f);
+    }
+
+    int WeightedRandom(const std::vector<int>& weights);
 }

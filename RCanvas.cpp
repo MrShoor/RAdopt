@@ -55,7 +55,9 @@ namespace RA {
         if (m_prog_was_inited[int(kind)]) return;
         m_prog_was_inited[int(kind)] = true;
 
-        glm::vec2 view_pixel_size = glm::vec2(2.0f) / glm::vec2(m_dev->ActiveFrameBuffer()->GetSize());
+        float dpi_scale = (m_canvas_common_object) ? m_canvas_common_object->GetDPIScale() : 1.0f;
+
+        glm::vec2 view_pixel_size = glm::vec2(2.0f) / glm::vec2(m_dev->ActiveFrameBuffer()->GetSize()) / dpi_scale;
         glm::mat4 m4;
         m4[0] = glm::vec4(transform_2d[0].x, transform_2d[0].y, 0.0, 0.0);
         m4[1] = glm::vec4(transform_2d[1].x, transform_2d[1].y, 0.0, 0.0);
@@ -87,6 +89,7 @@ namespace RA {
         case BatchKind::Lines: {
             m_lines_out_prog->SetResource("camera", camera.GetUBO());
             m_lines_out_prog->SetValue("view_pixel_size", view_pixel_size);
+            m_lines_out_prog->SetValue("dpi_scale", dpi_scale);
             m_lines_out_prog->SetValue("pos3d", m_pos);
             m_lines_out_prog->SetValue("transform_2d", m4);
             m_lines_out_prog->SetInputBuffers(nullptr, nullptr, m_lines_buf);
@@ -419,8 +422,9 @@ namespace RA {
             canvas_common_object.m_text_out_prog,
             canvas_common_object.m_tris_out_prog,
             canvas_common_object.m_lines_out_prog
-        )
+        )        
     {
+        m_canvas_common_object = &canvas_common_object;
     }
     glm::vec4 Pen::GetColor()
     {
@@ -474,6 +478,14 @@ namespace RA {
             ->Add("hinting", LayoutType::Float, 1)
             ->Add("sprite_idx", LayoutType::UInt, 1)
             ->Finish();
+    }
+    float CanvasCommonObject::GetDPIScale() const
+    {
+        return m_dpi_scale;
+    }
+    void CanvasCommonObject::SetDPIScale(float scale)
+    {
+        m_dpi_scale = scale;
     }
     AtlasPtr CanvasCommonObject::GetAtlas() const
     {

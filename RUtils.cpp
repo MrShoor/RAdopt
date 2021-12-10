@@ -345,6 +345,17 @@ namespace RA {
     RangeManagerIntfPtr Create_RangeManager(int size) {
         return std::make_unique<RangeManager>(size);
     }
+    uint64_t QPC::TimeMcS() const
+    {
+        if (m_paused) {
+            return (m_paused_time - m_start) * 1000000 / m_freq;
+        }
+        else {
+            uint64_t tmp;
+            QueryPerformanceCounter((LARGE_INTEGER*)&tmp);
+            return (tmp - m_start) * 1000000 / m_freq;
+        }
+    }
     uint64_t QPC::Time() const
     {        
         if (m_paused) {

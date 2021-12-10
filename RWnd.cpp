@@ -246,6 +246,20 @@ namespace RA {
     void UIRenderWindow::ControlsDraw_Before()
     {
     }
+    void UIRenderWindow::UpdateDPIScale()
+    {
+        if (!m_control_global) return;
+        float dpi = GetDPIScale();
+        if (dpi != m_last_dpi_scale) {
+            m_last_dpi_scale = dpi;
+            m_control_global->SetDPIScale(m_last_dpi_scale);
+            m_control_global->Root()->SetSize(m_control_global->Root()->Size() * m_control_global->GetDPIScale());
+        }
+    }
+    float UIRenderWindow::GetDPIScale() const
+    {
+        return 1.0f;
+    }
     void UIRenderWindow::MouseMove(const glm::ivec2& crd, const ShiftState& ss)
     {
         m_control_global->Process_MouseMove(crd, ss);
@@ -276,11 +290,12 @@ namespace RA {
     }
     void UIRenderWindow::WindowResized(const glm::ivec2& new_size)
     {
-        m_control_global->Root()->SetSize(new_size);
+        m_control_global->Root()->SetSize(glm::vec2(new_size) * m_control_global->GetDPIScale());
     }
     void UIRenderWindow::RenderScene()
     {
         RenderWindow::RenderScene();
+        m_control_global->SetDPIScale(GetDPIScale());
 
         RECT rct;
         GetClientRect(m_device->Window(), &rct);
@@ -302,16 +317,18 @@ namespace RA {
     {
         if (m_control_global)
             m_control_global->Process_XInput();
+        UpdateDPIScale();
         return RenderWindow::WndProc(hwnd, uMsg, wParam, lParam);
     }
     UIRenderWindow::UIRenderWindow(std::wstring caption, bool isMainWindow, bool sRGB) : RenderWindow(caption, isMainWindow, sRGB)
     {
         m_canvas_common = std::make_shared<CanvasCommonObject>(m_device);
         m_control_global = std::make_unique<ControlGlobal>(m_canvas_common);
+        m_control_global->SetDPIScale(GetDPIScale());
 
         RECT rct;
         GetClientRect(Handle(), &rct);
-        m_control_global->Root()->SetSize(glm::vec2(rct.right, rct.bottom));
+        m_control_global->Root()->SetSize(glm::vec2(rct.right, rct.bottom) * m_control_global->GetDPIScale());
 
         m_ui_camera = std::make_unique<UICamera>(m_device);
 

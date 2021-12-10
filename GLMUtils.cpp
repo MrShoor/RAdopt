@@ -120,4 +120,16 @@ namespace glm {
         *t = tmpt;
         return true;
     }
+    int WeightedRandom(const std::vector<int>& weights)
+    {
+        int weight_summ = 1;
+        for (const auto& w : weights) weight_summ += w;
+        int drop = std::rand() % weight_summ;
+        int drop_idx = 0;
+        while (drop > weights[drop_idx] && (drop_idx < weights.size())) {
+            drop -= weights[drop_idx];
+            drop_idx++;
+        }
+        return drop_idx;
+    }
 }

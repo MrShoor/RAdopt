@@ -180,6 +180,8 @@ namespace RA {
         bool m_paused = false;
         uint64_t m_paused_time;
     public:
+        uint64_t TimeMcS() const;
+
         uint64_t Time() const;
         void Pause();
         void Unpause();
