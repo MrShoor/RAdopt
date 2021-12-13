@@ -124,7 +124,8 @@ namespace glm {
     {
         int weight_summ = 1;
         for (const auto& w : weights) weight_summ += w;
-        int drop = std::rand() % weight_summ;
+        int r = int(glm::linearRand(0.f,1.f) * weight_summ);
+        int drop = r % weight_summ;
         int drop_idx = 0;
         while (drop > weights[drop_idx] && (drop_idx < weights.size())) {
             drop -= weights[drop_idx];
