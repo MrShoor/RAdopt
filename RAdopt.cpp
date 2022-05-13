@@ -666,7 +666,7 @@ namespace RA {
     void Device::PresentToWnd()
     {
         SetFrameBuffer(nullptr);
-        m_swapChain->Present(0, 0);
+        m_swapChain->Present(1, 0);
         m_active_program = nullptr;
     }
     DevChild::DevChild(const DevicePtr& device) : m_device(device)

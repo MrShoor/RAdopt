@@ -282,6 +282,45 @@ namespace RA {
         CustomButton();
     };
 
+    class CustomPopupMenu : public CustomControl {
+    protected:
+        struct MenuItem {
+            std::wstring name;
+            std::function<void()> callback = nullptr;
+            MenuItem() = default;
+            MenuItem(std::wstring name, std::function<void()> cb) :
+                name(std::move(name)),
+                callback(std::move(cb))
+            {}
+        };
+    protected:
+        float m_item_height = 48.0f;
+        std::vector<MenuItem> m_items;
+        glm::vec2 m_target_size;
+
+        int m_moved_idx = -1;
+
+        void SetMovedIdx(int idx) {
+            if (m_moved_idx != idx) {
+                m_moved_idx = idx;
+                Invalidate();
+            }
+        }
+        void HidePopup();
+    protected:
+        void Notify_RootChanged() override;
+        void OnUPS(uint64_t dt) override;
+        void Notify_MouseUp(int btn, const glm::vec2& pt, const ShiftState& shifts) override;
+        void Notify_MouseMove(const glm::vec2& pt, const ShiftState& shifts) override;
+    public:
+        float GetItemHeight() const;
+        void SetItemHeight(float item_height);
+
+        void Clear();
+        void AddItem(std::wstring name, std::function<void()> cb);
+        void Popup(const glm::vec2& pos, float menu_width = 0);
+    };
+
     void GridAlign_FixedSize(
         const std::vector<Control*>& controls,
         const glm::AABR& item_box,

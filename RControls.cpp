@@ -495,6 +495,7 @@ namespace RA {
     }
     Canvas* CustomControl::Canvas()
     {
+        PrepareCanvas();
         return m_canvas.get();
     }
     bool CustomControl::Moved()
@@ -756,7 +757,8 @@ namespace RA {
     void ControlGlobal::Process_MouseUp(int btn, glm::vec2 pt, const ShiftState& shifts)
     {
         pt *= GetDPIScale();
-        Control* m = UpdateMovedState(pt);        
+        Control* m = UpdateMovedState(pt); 
+        SetCaptured(nullptr);
         if (m) {
             m->Notify_MouseUp(btn, ConvertEventCoord(m, pt), shifts);
             if (Captured() == m) {
@@ -767,7 +769,6 @@ namespace RA {
                 }
             }
         }
-        SetCaptured(nullptr);
     }
     void ControlGlobal::Process_MouseDblClick(int btn, glm::vec2 pt, const ShiftState& shifts)
     {
@@ -989,4 +990,90 @@ namespace RA {
             }
         }
     }
+    void CustomPopupMenu::HidePopup()
+    {
+        SetVisible(false);
+        UPSUnsubscribe();
+    }
+    void CustomPopupMenu::Notify_RootChanged()
+    {
+        CustomControl::Notify_RootChanged();
+        HidePopup();
+    }
+    void CustomPopupMenu::OnUPS(uint64_t dt)
+    {
+        CustomControl::OnUPS(dt);
+        if (glm::length2(m_target_size - Size()) < 1.0) {
+            SetSize(m_target_size);
+            UPSUnsubscribe();
+        }
+        else {
+            SetSize(glm::mix(Size(), m_target_size, 0.25f));
+        }
+    }
+
+    void CustomPopupMenu::Notify_MouseUp(int btn, const glm::vec2& pt, const ShiftState& shifts)
+    {
+        CustomControl::Notify_MouseUp(btn, pt, shifts);
+        if (m_moved_idx >= 0 && m_moved_idx < m_items.size()) {
+            if (m_items[m_moved_idx].callback != nullptr) {
+                m_items[m_moved_idx].callback();
+            }
+        }
+        HidePopup();
+        Global()->SetCaptured(nullptr);
+    }
+
+    void CustomPopupMenu::Notify_MouseMove(const glm::vec2& pt, const ShiftState& shifts)
+    {
+        CustomControl::Notify_MouseMove(pt, shifts);
+        if (pt.x < 0 || pt.y < 0 || pt.x >= Size().x || pt.y >= Size().y) {
+            SetMovedIdx(-1);
+            return;
+        }
+        SetMovedIdx(int(pt.y / m_item_height));
+    }
+
+    float CustomPopupMenu::GetItemHeight() const
+    {
+        return m_item_height;
+    }
+
+    void CustomPopupMenu::SetItemHeight(float item_height)
+    {
+        if (m_item_height != item_height) {
+            m_item_height = item_height;
+            Invalidate();
+        }
+    }
+
+    void CustomPopupMenu::Clear()
+    {
+        m_items.clear();
+    }
+
+    void CustomPopupMenu::AddItem(std::wstring name, std::function<void()> cb)
+    {
+        m_items.emplace_back(std::move(name), std::move(cb));
+    }
+
+    void CustomPopupMenu::Popup(const glm::vec2& pos, float menu_width)
+    {
+        float w = menu_width;
+        if (w <= 0) {
+            auto tb = Canvas()->TB();
+            tb->Font_SetSize(m_item_height * 0.5f);
+            for (const MenuItem& item : m_items) {
+                tb->WriteLine(item.name);
+            }
+            w = tb->Finish()->MaxLineWidth() + 60;
+        }
+        SetPos(pos);
+        SetSize({ 0,0 });
+        SetVisible(true);
+        m_target_size = { w, m_items.size() * m_item_height };
+        Global()->SetCaptured(this);
+        UPSSubscribe();
+    }
+
 }

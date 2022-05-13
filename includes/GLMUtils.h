@@ -2,6 +2,7 @@
 #include "GLM.h"
 #include <limits>
 #include <functional>
+#include <vector>
 
 static constexpr float cPI = 3.1415926535897932384626433832795f;
 static constexpr float cPI2 = 6.283185307179586476925286766559f;
