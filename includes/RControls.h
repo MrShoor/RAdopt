@@ -3,7 +3,6 @@
 #include "RCanvas.h"
 #include "RTypes.h"
 #include <winsdkver.h>
-#define _WIN32_WINNT 0x0601
 #include <xinput.h>
 #include <array>
 

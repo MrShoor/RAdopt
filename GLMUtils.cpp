@@ -127,7 +127,7 @@ namespace glm {
         int r = int(glm::linearRand(0.f,1.f) * weight_summ);
         int drop = r % weight_summ;
         int drop_idx = 0;
-        while (drop > weights[drop_idx] && (drop_idx < weights.size())) {
+        while (drop > weights[drop_idx] && (drop_idx < int(weights.size()))) {
             drop -= weights[drop_idx];
             drop_idx++;
         }
