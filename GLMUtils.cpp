@@ -120,6 +120,22 @@ namespace glm {
         *t = tmpt;
         return true;
     }
+    bool Intersect(const glm::Plane& plane, const glm::Ray& ray, float* t)
+    {
+        float da = -glm::dot(plane.v.xyz(), ray.origin);
+        float db = -glm::dot(plane.v.xyz(), ray.origin + ray.dir);
+        if (da == db) return false;
+        if (t)
+            *t = (plane.v.w - da) / (db - da);
+        return true;
+    }
+    bool Intersect(const glm::Plane& plane, const glm::Ray& ray, glm::vec3& pt)
+    {
+        float t;
+        if (!Intersect(plane, ray, &t)) return false;
+        pt = ray.origin + ray.dir * t;
+        return true;
+    }
     int WeightedRandom(const std::vector<int>& weights)
     {
         int weight_summ = 1;

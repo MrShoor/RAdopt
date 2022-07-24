@@ -86,6 +86,8 @@ namespace RA {
 
         void UpdateInstanceVertex();
     public:
+        void* user_data;
+
         const MeshPtr& MeshData() const;
         const MeshInstancePtr& InstanceData() const;
 
@@ -99,7 +101,7 @@ namespace RA {
         const glm::mat4& GetTransform() const;
         void SetTransform(const glm::mat4 m);
 
-        MCMeshInstance(MeshCollection* system, const MCMeshPtr& mesh, const MeshInstancePtr& instance, MemRangeIntfPtr remap_range);
+        MCMeshInstance(MeshCollection* system, const MCMeshPtr& mesh, const MeshInstancePtr& instance, MemRangeIntfPtr remap_range) noexcept;
         ~MCMeshInstance();
     };
     using MCMeshInstancePtr = std::unique_ptr<MCMeshInstance>;
@@ -168,6 +170,7 @@ namespace RA {
         std::vector<MCMeshInstancePtr> Clone_MeshInstances(const fs::path& filename, const std::vector<std::string>& instances, uint32_t groupID);
 
         MeshCollection(const DevicePtr& dev);
+        ~MeshCollection();
     };
 
     class DecalsManager;

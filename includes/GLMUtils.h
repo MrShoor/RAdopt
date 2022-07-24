@@ -192,6 +192,11 @@ namespace glm {
         }
     };
 
+    struct Ray {
+        vec3 origin = { 0, 0, 0 };
+        vec3 dir = { 1, 0, 0 };
+    };
+
     inline bool Intersect(const Plane& p1, const Plane& p2, const Plane& p3, vec3* intpt) {
         mat3 m = { p1.v.xyz(), p2.v.xyz(), p3.v.xyz() };
         vec3 b = { -p1.v.w, -p2.v.w, -p3.v.w };
@@ -204,6 +209,8 @@ namespace glm {
     bool Intersect(const glm::AABB& box, const glm::vec3& pt1, const glm::vec3& pt2, const glm::vec3& pt3);
     bool Intersect(const glm::AABB& box, const glm::vec3& seg_start, const glm::vec3& seg_end, bool solid_aabb);
     bool Intersect(const vec3& pt1, const vec3& pt2, const vec3& pt3, const vec3& seg_start, const vec3& seg_end, float* t);
+    bool Intersect(const glm::Plane& plane, const glm::Ray& ray, float* t = nullptr);
+    bool Intersect(const glm::Plane& plane, const glm::Ray& ray, glm::vec3& pt);
 
     struct Bezier2_2d {
         vec2 pt[3];

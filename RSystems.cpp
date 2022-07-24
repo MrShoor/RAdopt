@@ -223,6 +223,26 @@ namespace RA {
         m_inst_vbuf = m_dev->Create_VertexBuffer();
         m_inst_vbuf->SetState(MCMeshInstanceVertex::Layout(), 128);
     }
+    MeshCollection::~MeshCollection()
+    {
+        for (const auto& inst : m_instances)
+        {
+            inst->m_sys = nullptr;
+            inst->m_remap_range = nullptr;
+        }
+        for (const auto& arm : m_armatures)
+        {
+            arm->m_sys = nullptr;
+            arm->m_range = nullptr;
+        }
+        for (const auto& it : m_meshes)
+        {
+            it.second->m_sys = nullptr;
+            it.second->m_vertices = nullptr;
+            it.second->m_indices = nullptr;
+            it.second->m_materials = nullptr;
+        }
+    }
     void MCArmature::Invalidate()
     {
         if (m_sys) {
@@ -328,7 +348,7 @@ namespace RA {
         m_inst->SetTransform(m);
         UpdateInstanceVertex();
     }
-    MCMeshInstance::MCMeshInstance(MeshCollection* system, const MCMeshPtr& mesh, const MeshInstancePtr& instance, MemRangeIntfPtr remap_range)
+    MCMeshInstance::MCMeshInstance(MeshCollection* system, const MCMeshPtr& mesh, const MeshInstancePtr& instance, MemRangeIntfPtr remap_range) noexcept
     {
         m_group_id = 0;
         m_sys = system;

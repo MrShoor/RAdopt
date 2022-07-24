@@ -85,6 +85,8 @@ namespace RA {
         void FitView(const glm::vec3* points, int num_points);
         void FitView(const glm::AABB& bbox);
 
+        glm::Ray NDCToWorldRay(const glm::vec2& ndc) const;
+
         glm::vec3 Eye() const;
         glm::vec3 At() const;
         glm::vec3 ViewDir() const;        

@@ -185,6 +185,17 @@ namespace RA {
             points[i] = bbox.Point(i);
         FitView(points, 8);
     }
+    glm::Ray Camera::NDCToWorldRay(const glm::vec2& ndc) const
+    {
+        glm::vec4 tmp_near = glm::vec4(ndc, m_depth_range.x, 1.0);
+        glm::vec4 tmp_far = glm::vec4(ndc, m_depth_range.y, 1.0);
+        tmp_near = m_buf.view_proj_inv * tmp_near;
+        tmp_far = m_buf.view_proj_inv * tmp_far;
+        glm::Ray res;
+        res.origin = tmp_near.xyz() / tmp_near.w;
+        res.dir = tmp_far.xyz() / tmp_far.w - res.origin;
+        return res;
+    }
     glm::vec3 Camera::ViewDir() const
     {
         return m_at - m_eye;
