@@ -3,9 +3,9 @@
 
 namespace RA {
     struct ShiftState {
-        bool ctrl;
-        bool shift;
-        bool mouse_btn[5];
+        bool ctrl = false;
+        bool shift = false;
+        bool mouse_btn[5] = { false, false, false, false, false };
     };
 
     template<typename T>

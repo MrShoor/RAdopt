@@ -126,6 +126,23 @@ namespace RA {
         float aspect = float((rct.bottom - rct.top)) / (rct.right - rct.left);
         SetProjection(m_fov, aspect, m_near_far, m_depth_range);
     }
+    void Camera::SetOrthoWidhtHeight(HWND wnd)
+    {
+        RECT rct;
+        GetClientRect(wnd, &rct);
+        SetOrthoWidhtHeight(glm::vec2(rct.right - rct.left, rct.bottom - rct.top));
+    }
+    void Camera::SetOrthoWidhtHeight_ByAspectAndHeight(HWND wnd, float height)
+    {
+        RECT rct;
+        GetClientRect(wnd, &rct);
+        float w = float(rct.right - rct.left) * (height / (rct.bottom - rct.top));
+        SetOrthoWidhtHeight(glm::vec2(w, height));
+    }
+    void Camera::SetOrthoWidhtHeight(const glm::vec2& width_height)
+    {
+        SetOrtho(width_height.x, width_height.y, m_near_far, m_depth_range);
+    }
     void Camera::SetNearFar(const glm::vec2& near_far)
     {
         SetProjection(m_fov, m_aspect, near_far, m_depth_range);

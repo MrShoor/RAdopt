@@ -80,6 +80,9 @@ namespace RA {
         float Aspect() const;
 
         void SetAspect(HWND wnd);
+        void SetOrthoWidhtHeight(HWND wnd);
+        void SetOrthoWidhtHeight_ByAspectAndHeight(HWND wnd, float height);
+        void SetOrthoWidhtHeight(const glm::vec2& width_height);
         void SetNearFar(const glm::vec2& near_far);
 
         void FitView(const glm::vec3* points, int num_points);
