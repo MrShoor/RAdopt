@@ -716,7 +716,7 @@ namespace RA {
         if (ctrl) {            
             if (Captured() == ctrl) {
                 for (int i = 0; i < 5; i++) {
-                    if (!m_in_drag[i]) {
+                    if (!m_in_drag[i] && shifts.mouse_btn[i]) {
                         glm::vec2 dir = m_drag_point[i] - pt;
                         float dist = ctrl->DragThreshold();
                         if (glm::dot(dir, dir) > dist * dist) {
@@ -757,11 +757,12 @@ namespace RA {
     void ControlGlobal::Process_MouseUp(int btn, glm::vec2 pt, const ShiftState& shifts)
     {
         pt *= GetDPIScale();
-        Control* m = UpdateMovedState(pt); 
+        Control* m = UpdateMovedState(pt);
+        Control* oldcaptured = Captured();
         SetCaptured(nullptr);
         if (m) {
             m->Notify_MouseUp(btn, ConvertEventCoord(m, pt), shifts);
-            if (Captured() == m) {
+            if (oldcaptured == m) {
                 for (int i = 0; i < 5; i++) {
                     if (m_in_drag[i])
                         m->Notify_DragStop(btn, pt, m_drag_point[i], shifts);

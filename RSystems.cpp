@@ -74,7 +74,18 @@ namespace RA {
             glm::ivec2 vr = v_range->OffsetSize();
             glm::ivec2 ir = i_range->OffsetSize();
             glm::ivec2 mr = mat_range->OffsetSize();
-            MCMeshPtr result = std::make_shared<MCMesh>(this, mesh, std::move(v_range), std::move(i_range), std::move(mat_range));
+            RA::Texture2DPtr albedo = nullptr;
+            if (mesh->materials.size()) {
+                if (!mesh->materials[0].albedo_map.empty())
+                    albedo = ObtainTexture(mesh->materials[0].albedo_map, true);
+            }            
+            MCMeshPtr result = std::make_shared<MCMesh>(
+                this, 
+                mesh, 
+                std::move(v_range), 
+                std::move(i_range), 
+                std::move(mat_range),
+                albedo);
             m_mesh_vbuf->SetSubData(vr.x, vr.y, mesh->vertices.data());
             m_mesh_ibuf->SetSubData(ir.x, ir.y, mesh->indices.data());
             m_mesh_matbuf->SetSubData(mr.x, mr.y, result->m_materials_data.data());
@@ -91,15 +102,19 @@ namespace RA {
         ValidateArmatures();
         FillBuffers(bufs);
         for (const auto& inst : instances) {
-            draw_commands->commands[inst->GetGroupID()].push_back(GetDrawCommand(inst));
+            RA::Texture2DPtr albedo_tex;
+            auto cmd = GetDrawCommand(inst, albedo_tex);
+            draw_commands->commands[inst->GetGroupID()][albedo_tex].push_back(cmd);
         }
     }
     void MeshCollection::PrepareBuffers(const std::vector<MCMeshInstancePtr>& instances, MeshCollectionBuffers* bufs, MeshCollectionDrawCommands* draw_commands)
     {
         ValidateArmatures();
         FillBuffers(bufs);
-        for (const auto& inst : instances) {            
-            draw_commands->commands[inst->GetGroupID()].push_back(GetDrawCommand(inst.get()));
+        for (const auto& inst : instances) {         
+            RA::Texture2DPtr albedo_tex;
+            auto cmd = GetDrawCommand(inst.get(), albedo_tex);
+            draw_commands->commands[inst->GetGroupID()][albedo_tex].push_back(cmd);
         }
     }
     MCArmaturePtr MeshCollection::Create_Armature(const fs::path& filename, const std::string& armature_name)
@@ -160,6 +175,22 @@ namespace RA {
         bufs->bones = &m_bones;
         bufs->bones_remap = &m_bone_remap;
     }
+    RA::Texture2DPtr MeshCollection::ObtainTexture(const std::filesystem::path& path, bool srgb)
+    {
+        auto it = m_maps.find(path);
+        if (it == m_maps.end()) {
+            Texture2DPtr tex = m_dev->Create_Texture2D();
+            TexDataIntf* tex_data = RA::TM()->Load(path);
+            TextureFmt fmt = tex_data->Fmt();
+            if (fmt == TextureFmt::RGBA8 && srgb) fmt = TextureFmt::RGBA8_SRGB;
+            tex->SetState(fmt, tex_data->Size(), 16, 1);
+            tex->SetSubData({ 0,0 }, tex_data->Size(), 0, 0, tex_data->Data());
+            tex->GenerateMips();
+            m_maps.insert({ path, tex });
+            return tex;
+        }        
+        return it->second;
+    }
     DrawIndexedCmd MeshCollection::GetDrawCommand(MCMeshInstance* inst)
     {
         DrawIndexedCmd cmd;
@@ -167,8 +198,28 @@ namespace RA {
         cmd.IndexCount = inst->m_mesh->m_indices->OffsetSize().y;
         cmd.BaseVertex = inst->m_mesh->m_vertices->OffsetSize().x;
         cmd.BaseInstance = inst->m_idx;
-        cmd.InstanceCount = 1;
+        cmd.InstanceCount = 1;        
         return cmd;
+    }
+    DrawIndexedCmd MeshCollection::GetDrawCommand(MCMeshInstance* inst, Texture2DPtr& albedo)
+    {
+        albedo = inst->m_mesh->Albedo();
+        if (albedo == nullptr) albedo = m_tex_white_pixel;
+        return GetDrawCommand(inst);
+    }
+    float MeshCollection::HitTest(const glm::Ray& ray, MCMeshInstance*& hit_inst)
+    {
+        float t = 1.0f;
+        hit_inst = nullptr;
+        for (auto& inst : m_instances) {
+            if (!inst) continue;
+            float t_curr = inst->HitTest(ray);
+            if (t_curr < t) {
+                t = t_curr;
+                hit_inst = inst;
+            }
+        }
+        return t;
     }
     MCMeshInstancePtr MeshCollection::Clone_MeshInstance(const fs::path& filename, const std::string& instance_name)
     {
@@ -196,9 +247,21 @@ namespace RA {
         }
         return res;
     }
+    void MeshCollection::AllMeshInstances(const fs::path& filename, const std::function<void(std::string)>& cb)
+    {
+        if (!cb) return;
+        AVMScene* scene = ObtainScene(filename);
+        if (!scene) return;
+        for (const auto& it : scene->instances)
+            cb(it.first);
+    }
     MeshCollection::MeshCollection(const DevicePtr& dev)
     {
         m_dev = dev;
+
+        glm::u8vec4 white = { 255,255,255,255 };
+        m_tex_white_pixel = m_dev->Create_Texture2D();
+        m_tex_white_pixel->SetState(RA::TextureFmt::RGBA8, { 1,1 }, 0, 1, &white);
 
         m_bones_ranges = Create_RangeManager(256);
         m_bones = m_dev->Create_StructuredBuffer();
@@ -321,6 +384,16 @@ namespace RA {
     {
         m_group_id = group_id;
     }
+    float MCMeshInstance::HitTest(const glm::Ray& ray)
+    {
+        if (m_mesh) {
+            if (glm::Intersect(BBox(), ray.origin, ray.origin + ray.dir, true)) {
+                glm::mat4 m = glm::inverse(GetTransform());
+                return m_mesh->HitTest(m * ray);
+            }
+        }
+        return 1.0f;
+    }
     glm::AABB MCMeshInstance::BBox() const {
         return m_inst->BBox();
     }
@@ -381,15 +454,39 @@ namespace RA {
             }
         }
     }
+    RA::Texture2DPtr MCMesh::Albedo() const
+    {
+        return m_albedo;
+    }
     const MeshPtr& MCMesh::MeshData() const
     {
         return m_mesh;
+    }
+    float MCMesh::HitTest(const glm::Ray& ray)
+    {
+        if (!m_octree) {
+            std::vector<glm::vec3> tris;            
+            for (int i = 0; i < m_mesh->indices.size(); i += 3) {                
+                tris.push_back(m_mesh->vertices[m_mesh->indices[i + 0]].coord);
+                tris.push_back(m_mesh->vertices[m_mesh->indices[i + 1]].coord);
+                tris.push_back(m_mesh->vertices[m_mesh->indices[i + 2]].coord);
+            }
+            m_octree = RA::UPtrMake<Octree>(std::move(tris), 64);
+        }
+        return m_octree->RayCast(ray.origin, ray.origin + ray.dir);
     }
     std::shared_ptr<MCMesh> MCMesh::SPtr()
     {
         return shared_from_this();
     }
-    MCMesh::MCMesh(MeshCollection* system, const MeshPtr& mesh, MemRangeIntfPtr vertices, MemRangeIntfPtr indices, MemRangeIntfPtr materials)
+    MCMesh::MCMesh(MeshCollection* system, 
+                   const MeshPtr& mesh, 
+                   MemRangeIntfPtr vertices, 
+                   MemRangeIntfPtr indices, 
+                   MemRangeIntfPtr materials,
+                   RA::Texture2DPtr albedo)
+        : 
+            m_albedo(albedo)
     {
         m_sys = system;
         m_sys->m_meshes.insert({ mesh, this });

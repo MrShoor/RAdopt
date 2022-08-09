@@ -18,6 +18,17 @@ namespace glm {
         }
         AABR(const glm::vec2& min, const glm::vec2& max) : min(min), max(max) {
         }
+        glm::vec2 Point(int idx) const {
+            idx %= 4;
+            if (idx < 0) idx += 4;
+            switch (idx) {
+            case 0: return { min.x, min.y };
+            case 1: return { min.x, max.y };
+            case 2: return { max.x, min.y };
+            case 3: return { max.x, max.y };
+            default: return { 0,0 };
+            }
+        }
         inline bool IsEmpty() const {
             return (min.x >= max.x) || (min.y >= max.y);
         }
@@ -93,11 +104,20 @@ namespace glm {
             return true;
         }
     };
+    inline AABR operator * (const mat3& m, const AABR& b) {
+        AABR res;
+        for (int i = 0; i < 4; i++) {
+            glm::vec3 tmp = (m * glm::vec3(b.Point(i), 1.0f));
+            glm::vec2 tmp2 = tmp.xy() / tmp.z;
+            res += tmp2;
+        }
+        return res;
+    }
 
     struct AABB {
         vec3 min;
         vec3 max;
-        AABB() {
+        AABB() noexcept {
             SetEmpty();
         }
         glm::vec3 Point(int idx) const {
@@ -118,6 +138,62 @@ namespace glm {
         glm::Plane Plane(int idx) const;
         inline bool IsEmpty() const {
             return (min.x >= max.x) || (min.y >= max.y) || (min.z >= max.z);
+        }
+        inline void GetEdge(int idx, glm::vec3& pt1, glm::vec3& pt2) const {
+            idx %= 12;
+            if (idx < 0) idx += 12;
+            switch (idx) {
+            case 0:
+                pt1 = Point(0);
+                pt2 = Point(1);
+                return;
+            case 1:
+                pt1 = Point(1);
+                pt2 = Point(3);
+                return;
+            case 2:
+                pt1 = Point(3);
+                pt2 = Point(2);
+                return;
+            case 3:
+                pt1 = Point(2);
+                pt2 = Point(0);
+                return;
+
+            case 4:
+                pt1 = Point(4);
+                pt2 = Point(5);
+                return;
+            case 5:
+                pt1 = Point(5);
+                pt2 = Point(7);
+                return;
+            case 6:
+                pt1 = Point(7);
+                pt2 = Point(6);
+                return;
+            case 7:
+                pt1 = Point(6);
+                pt2 = Point(4);
+                return;
+
+            case 8:
+                pt1 = Point(0);
+                pt2 = Point(4);
+                return;
+            case 9:
+                pt1 = Point(1);
+                pt2 = Point(5);
+                return;
+            case 10:
+                pt1 = Point(2);
+                pt2 = Point(6);
+                return;
+            case 11:
+                pt1 = Point(3);
+                pt2 = Point(7);
+                return;
+            }
         }
         inline void SetEmpty() {
             min.x = std::numeric_limits<float>::max();
@@ -161,6 +237,12 @@ namespace glm {
             res.max += expansion;
             return res;
         }
+        inline AABB Offset(const glm::vec3& offset) const {
+            AABB res = *this;
+            res.min += offset;
+            res.max += offset;
+            return res;
+        }
     };
 
     inline AABB operator * (const mat4& m, const AABB& b) {
@@ -194,8 +276,16 @@ namespace glm {
 
     struct Ray {
         vec3 origin = { 0, 0, 0 };
-        vec3 dir = { 1, 0, 0 };
+        vec3 dir = { 1, 0, 0 };        
     };
+    inline Ray operator * (const mat4& m, const Ray& r) {
+        Ray res;
+        glm::vec4 tmp1 = (m * glm::vec4(r.origin, 1.0f));
+        glm::vec4 tmp2 = (m * glm::vec4(r.origin + r.dir, 1.0f));
+        res.origin = tmp1.xyz() / tmp1.w;
+        res.dir = tmp2.xyz() / tmp2.w - res.origin;
+        return res;
+    }
 
     inline bool Intersect(const Plane& p1, const Plane& p2, const Plane& p3, vec3* intpt) {
         mat3 m = { p1.v.xyz(), p2.v.xyz(), p3.v.xyz() };

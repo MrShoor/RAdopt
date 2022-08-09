@@ -1,5 +1,6 @@
 #pragma once
 #include "RAdopt.h"
+#include "RTypes.h"
 #include "RUtils.h"
 #include "RModels.h"
 #include "RAtlas.h"
@@ -48,16 +49,27 @@ namespace RA {
         MeshCollection* m_sys;
 
         MeshPtr m_mesh;
+        RA::Texture2DPtr m_albedo;
         MemRangeIntfPtr m_vertices;
         MemRangeIntfPtr m_indices;
         MemRangeIntfPtr m_materials;
 
         std::vector<MCMeshMaterialVertex> m_materials_data;
+
+        RA::UPtr<Octree> m_octree;
     public:
+        RA::Texture2DPtr Albedo() const;
         const MeshPtr& MeshData() const;
 
+        float HitTest(const glm::Ray& ray);
+
         std::shared_ptr<MCMesh> SPtr();
-        MCMesh(MeshCollection* system, const MeshPtr& mesh, MemRangeIntfPtr vertices, MemRangeIntfPtr indices, MemRangeIntfPtr materials);
+        MCMesh(MeshCollection* system, 
+                const MeshPtr& mesh, 
+                MemRangeIntfPtr vertices, 
+                MemRangeIntfPtr indices, 
+                MemRangeIntfPtr materials,
+                RA::Texture2DPtr albedo);
         ~MCMesh();
     };
     using MCMeshPtr = std::shared_ptr<MCMesh>;
@@ -86,7 +98,7 @@ namespace RA {
 
         void UpdateInstanceVertex();
     public:
-        void* user_data;
+        void* user_data = nullptr;
 
         const MeshPtr& MeshData() const;
         const MeshInstancePtr& InstanceData() const;
@@ -94,6 +106,7 @@ namespace RA {
         uint32_t GetGroupID();
         void SetGroupID(uint32_t group_id);
 
+        float HitTest(const glm::Ray& ray);
         glm::AABB BBox() const;
         void BindArmature(const MCArmaturePtr& arm);
 
@@ -114,8 +127,9 @@ namespace RA {
         const StructuredBufferPtr* bones;
         const StructuredBufferPtr* bones_remap;
     };
+
     struct MeshCollectionDrawCommands {
-        std::unordered_map<uint32_t, std::vector<DrawIndexedCmd>> commands;
+        std::unordered_map<uint32_t, std::unordered_map<Texture2DPtr, std::vector<DrawIndexedCmd>>> commands;
     };
 
     class MeshCollection {
@@ -151,6 +165,9 @@ namespace RA {
         StructuredBufferPtr m_bone_remap;
         RangeManagerIntfPtr m_bone_remap_ranges;
 
+        RA::Texture2DPtr m_tex_white_pixel;
+        std::unordered_map<std::filesystem::path, RA::Texture2DPtr> m_maps;
+
         std::unordered_map<fs::path, std::unique_ptr<AVMScene>, path_hasher> m_cache;
         AVMScene* ObtainScene(const fs::path& filename);
 
@@ -158,9 +175,14 @@ namespace RA {
 
         MCMeshInstancePtr Clone_MeshInstance(AVMScene* scene, const std::string& instance_name);
         void ValidateArmatures();
-        void FillBuffers(MeshCollectionBuffers* bufs);
+        void FillBuffers(MeshCollectionBuffers* bufs);        
+        RA::Texture2DPtr ObtainTexture(const std::filesystem::path& path, bool srgb);
         DrawIndexedCmd GetDrawCommand(MCMeshInstance* inst);
     public:
+        float HitTest(const glm::Ray& ray, MCMeshInstance*& hit_inst);
+
+        DrawIndexedCmd GetDrawCommand(MCMeshInstance* inst, Texture2DPtr& albedo);
+
         void PrepareBuffers(MeshCollectionBuffers* bufs, MeshCollectionDrawCommands* draw_commands);
         void PrepareBuffers(const std::vector<MCMeshInstance*>& instances, MeshCollectionBuffers* bufs, MeshCollectionDrawCommands* draw_commands);
         void PrepareBuffers(const std::vector<MCMeshInstancePtr>& instances, MeshCollectionBuffers* bufs, MeshCollectionDrawCommands* draw_commands);
@@ -168,6 +190,7 @@ namespace RA {
         MCArmaturePtr Create_Armature(const fs::path& filename, const std::string& armature_name);
         MCMeshInstancePtr Clone_MeshInstance(const fs::path& filename, const std::string& instance_name);
         std::vector<MCMeshInstancePtr> Clone_MeshInstances(const fs::path& filename, const std::vector<std::string>& instances, uint32_t groupID);
+        void AllMeshInstances(const fs::path& filename, const std::function<void(std::string)>& cb);
 
         MeshCollection(const DevicePtr& dev);
         ~MeshCollection();
