@@ -3,6 +3,8 @@
 #include "stb_image_bindings.h"
 #include <map>
 #include <unordered_set>
+#define NOMINMAX
+#include <Windows.h>
 
 namespace RA {
     Camera::Camera(const DevicePtr& device) : CameraBase(device)
@@ -372,6 +374,16 @@ namespace RA {
 
     RangeManagerIntfPtr Create_RangeManager(int size) {
         return std::make_unique<RangeManager>(size);
+    }
+    std::wstring UTF8ToWString(const std::string& utf8)
+    {
+        std::wstring res;
+        if (utf8.empty()) return res;
+        auto size = MultiByteToWideChar(CP_UTF8, 0, utf8.data(), int(utf8.size()), nullptr, 0);
+        if (size <= 0) return res;
+        res.resize(size_t(size));
+        MultiByteToWideChar(CP_UTF8, 0, utf8.data(), int(utf8.size()), res.data(), size);
+        return res;
     }
     uint64_t QPC::TimeMcS() const
     {

@@ -1077,4 +1077,28 @@ namespace RA {
         UPSSubscribe();
     }
 
+    glm::ivec2 CustomProgressBar::Range() const
+    {
+        return m_range;
+    }
+
+    void CustomProgressBar::SetRange(glm::ivec2 range)
+    {
+        if (m_range == range) return;
+        m_range = range;
+        Invalidate();
+    }
+
+    int CustomProgressBar::Value() const
+    {
+        return m_value;
+    }
+
+    void CustomProgressBar::SetValue(int value)
+    {
+        if (m_value == value) return;
+        m_value = value;
+        Invalidate();
+    }
+
 }

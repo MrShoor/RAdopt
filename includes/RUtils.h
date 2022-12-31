@@ -3,6 +3,7 @@
 #include "GLM.h"
 #include "GLMUtils.h"
 #include <filesystem>
+#include <string>
 
 namespace RA {
     enum class FrustumPlane {Top, Bottom, Right, Left, Near, Far};
@@ -274,4 +275,6 @@ namespace RA {
             return ftell(m_f);
         }
     };
+
+    std::wstring UTF8ToWString(const std::string& utf8);
 }

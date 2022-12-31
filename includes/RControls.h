@@ -320,6 +320,18 @@ namespace RA {
         void Popup(const glm::vec2& pos, float menu_width = 0);
     };
 
+    class CustomProgressBar : public CustomControl {
+    protected:
+        glm::ivec2 m_range{ 0, 100 };
+        int m_value{ 0 };
+    public:
+        glm::ivec2 Range() const;
+        void SetRange(glm::ivec2 range);
+
+        int Value() const;
+        void SetValue(int value);
+    };
+
     void GridAlign_FixedSize(
         const std::vector<Control*>& controls,
         const glm::AABR& item_box,
