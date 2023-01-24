@@ -257,6 +257,7 @@
     <ClInclude Include="includes\RSystems.h" />
     <ClInclude Include="includes\RTypes.h" />
     <ClInclude Include="includes\RWnd.h" />
+    <ClInclude Include="includes\Win.h" />
     <ClInclude Include="RAdoptConsts.h" />
     <ClInclude Include="stb_image.h" />
     <ClInclude Include="stb_image_bindings.h" />

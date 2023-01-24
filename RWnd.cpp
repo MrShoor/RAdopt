@@ -124,6 +124,10 @@ namespace RA {
         }
         return DefWindowProcW(hwnd, uMsg, wParam, lParam);
     }
+    void Window::SetCaption(const std::wstring& txt)
+    {
+        SetWindowText(m_hWnd, txt.c_str());
+    }
     Window::Window(std::wstring class_name, std::wstring wnd_caption, bool isMainWindow) {
         m_isMainWindow = isMainWindow;
         m_class_name = class_name;

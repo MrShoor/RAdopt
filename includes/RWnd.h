@@ -3,9 +3,7 @@
 #include "RTypes.h"
 #include "RControls.h"
 #include "RUtils.h"
-
-#define NOMINMAX
-#include <Windows.h>
+#include <Win.h>
 #include <string>
 #include <functional>
 
@@ -19,6 +17,7 @@ namespace RA {
         HWND m_hWnd;
     protected:
         bool m_isMainWindow;
+        void SetCaption(const std::wstring& txt);
     public:
         Window(std::wstring class_name, std::wstring wnd_caption, bool isMainWindow);
         virtual ~Window();

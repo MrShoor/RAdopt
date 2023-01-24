@@ -3,8 +3,7 @@
 #include "stb_image_bindings.h"
 #include <map>
 #include <unordered_set>
-#define NOMINMAX
-#include <Windows.h>
+#include <Win.h>
 
 namespace RA {
     Camera::Camera(const DevicePtr& device) : CameraBase(device)
@@ -383,6 +382,16 @@ namespace RA {
         if (size <= 0) return res;
         res.resize(size_t(size));
         MultiByteToWideChar(CP_UTF8, 0, utf8.data(), int(utf8.size()), res.data(), size);
+        return res;
+    }
+    std::string WStringToUTF8(const std::wstring& wstr)
+    {
+        std::string res;
+        if (wstr.empty()) return res;
+        int size = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), int(wstr.size()), NULL, 0, NULL, NULL);
+        if (size <= 0) return res;
+        res.resize(size_t(size));
+        WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), int(wstr.size()), res.data(), size, NULL, NULL);
         return res;
     }
     uint64_t QPC::TimeMcS() const

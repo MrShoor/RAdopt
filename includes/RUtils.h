@@ -277,4 +277,5 @@ namespace RA {
     };
 
     std::wstring UTF8ToWString(const std::string& utf8);
+    std::string WStringToUTF8(const std::wstring& wstr);
 }
