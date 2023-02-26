@@ -952,15 +952,16 @@ namespace RA {
         return m_xinput_stick_pos[pad][int(stick)];
     }
     void GridAlign_FixedSize(
-        const std::vector<Control*>& controls, 
-        const glm::AABR& item_box, 
+        int controls_count,
+        std::function<Control* (int idx)> get_control,
+        const glm::AABR& item_box,
         const glm::vec2& min_step,
         float preferred_y_step,
         bool force_fit_y,
         glm::vec2& grid_step,
         glm::vec2& grid_size)
     {
-        int num_controls = int(controls.size());
+        int num_controls = controls_count;
         if (num_controls == 0) {
             grid_size = { 0,0 };
             grid_step = { 0,0 };
@@ -985,11 +986,34 @@ namespace RA {
         if (num_col == 1) start_xy.x = item_box.Center().x * 0.5f;
         for (int y = 0; y < num_row; y++) {
             for (int x = 0; x < num_col; x++) {
-                controls[n]->SetPos(item_box.min + grid_step * glm::vec2(x, y));
+                Control* ctrl = get_control(n);
+                if (ctrl)
+                    ctrl->SetPos(item_box.min + grid_step * glm::vec2(x, y));
                 n++;
                 if (n == num_controls) return;
             }
         }
+    }
+
+    void GridAlign_FixedSize(
+        const std::vector<Control*>& controls, 
+        const glm::AABR& item_box, 
+        const glm::vec2& min_step,
+        float preferred_y_step,
+        bool force_fit_y,
+        glm::vec2& grid_step,
+        glm::vec2& grid_size)
+    {
+        GridAlign_FixedSize(
+            int(controls.size()),
+            [&](int idx) { return controls[idx]; },
+            item_box,
+            min_step,
+            preferred_y_step,
+            force_fit_y,
+            grid_step,
+            grid_size
+        );
     }
     void CustomPopupMenu::HidePopup()
     {

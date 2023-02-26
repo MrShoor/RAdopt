@@ -333,6 +333,17 @@ namespace RA {
     };
 
     void GridAlign_FixedSize(
+        int controls_count,
+        std::function<Control*(int idx)> get_control,
+        const glm::AABR& item_box,
+        const glm::vec2& min_step,
+        float preferred_y_step,
+        bool force_fit_y,
+        glm::vec2& grid_step,
+        glm::vec2& grid_size
+    );
+
+    void GridAlign_FixedSize(
         const std::vector<Control*>& controls,
         const glm::AABR& item_box,
         const glm::vec2& min_step,

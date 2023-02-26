@@ -95,10 +95,22 @@ namespace RA {
 
     enum class LineAlign { Left, Center, Right };
 
+    struct FontParams {
+        std::string name = "Arial";
+        glm::vec4 color = { 1,1,1,1 };
+        float size = 32;
+        float sdf_offset = 0.0f;
+        bool bold = false;
+        bool italic = false;
+        bool underline = false;
+        bool striked = false;
+    };
+
     class ITextBuilder {
     public:
         virtual void SetPenPos(glm::vec2 pen_pos) = 0;
 
+        virtual void Font_Set(const FontParams& params) = 0;
         virtual void Font_SetName(const char* name) = 0;
         virtual void Font_SetColor(const glm::vec4& color) = 0;
         virtual void Font_SetSize(float size) = 0;

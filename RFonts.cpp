@@ -322,6 +322,15 @@ namespace RA {
     public:
         void SetPenPos(glm::vec2 pen_pos) override { m_pos = pen_pos; }
 
+        void Font_Set(const FontParams& params) override { 
+            m_fontname = params.name; 
+            m_color = params.color; 
+            m_font_size = params.size; 
+            m_sdf_offset = params.sdf_offset; 
+            m_bold = params.bold; 
+            m_italic = params.italic; 
+            m_underline = params.underline; 
+            m_strikeout = params.striked; }
         void Font_SetName(const char* name) override { m_fontname = name; };
         void Font_SetColor(const glm::vec4& color) override { m_color = color; };
         void Font_SetSize(float size) override { m_font_size = size; };

@@ -392,4 +392,5 @@ namespace glm {
     }
 
     int WeightedRandom(const std::vector<int>& weights);
+    int WeightedRandom(int items_count, const std::function<int(int idx)> get_weight);
 }

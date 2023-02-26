@@ -1027,6 +1027,10 @@ namespace RA {
         }
     }
 
+    uint32_t MakeFourCC(char ch0, char ch1, char ch2, char ch3) {
+        return uint32_t(ch0) | (uint32_t(ch1) << 8) | (uint32_t(ch2) << 16) | (uint32_t(ch3) << 24);
+    };
+
     void Program::Load(std::istream& stream)
     {
         struct Chunk {
@@ -1069,7 +1073,7 @@ namespace RA {
             for (int i = 0; i < 2; i++) {
                 Chunk part_ch;
                 part_ch = readChunk();
-                if (part_ch.id == MAKEFOURCC('C', 'O', 'D', 'E')) {
+                if (part_ch.id == MakeFourCC('C', 'O', 'D', 'E')) {
                     uint32_t code_size;
                     stream.read((char*)&code_size, sizeof(code_size));
                     std::vector<char>& raw_data = m_shader_data[int(st)];
@@ -1100,7 +1104,7 @@ namespace RA {
                     AutoReflect(raw_data.data(), int(raw_data.size()), st);
                     continue;
                 }
-                if (part_ch.id == MAKEFOURCC('U', 'B', 'L', 'K')) {
+                if (part_ch.id == MakeFourCC('U', 'B', 'L', 'K')) {
                     stream.seekg(part_ch.size, std::ios::cur);
                     continue;
                 }

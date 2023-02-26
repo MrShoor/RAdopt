@@ -138,13 +138,17 @@ namespace glm {
     }
     int WeightedRandom(const std::vector<int>& weights)
     {
+        return WeightedRandom(int(weights.size()), [&](int idx) {return weights[idx]; });
+    }
+    int WeightedRandom(int items_count, const std::function<int(int idx)> get_weight)
+    {
         int weight_summ = 1;
-        for (const auto& w : weights) weight_summ += w;
-        int r = int(glm::linearRand(0.f,1.f) * weight_summ);
+        for (int i = 0; i < items_count; i++) weight_summ += get_weight(i);
+        int r = int(glm::linearRand(0.f, 1.f) * weight_summ);
         int drop = r % weight_summ;
         int drop_idx = 0;
-        while (drop > weights[drop_idx] && (drop_idx < int(weights.size()))) {
-            drop -= weights[drop_idx];
+        while (drop > get_weight(drop_idx) && (drop_idx < items_count)) {
+            drop -= get_weight(drop_idx);
             drop_idx++;
         }
         return drop_idx;
