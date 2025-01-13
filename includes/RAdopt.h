@@ -124,7 +124,7 @@ namespace RA {
 
         std::vector<StateData> m_states;
     private:
-        void SetDefaultStates();        
+        void SetDefaultStates();
     public:
         void Push();
         void Pop();
@@ -135,6 +135,7 @@ namespace RA {
         void SetDepthEnable(bool enable);
         void SetDepthWrite(bool enable);
         void SetDepthFunc(Compare cmp);
+        void SetDepthBias(int Bias, float BiasClamp, float SlopeScaledBias);
 
         void SetBlend(bool enable, Blend src = Blend::one, Blend dst = Blend::one, int rt_index = -1, BlendFunc bf = BlendFunc::add);
         void SetBlendSeparateAlpha(bool enable, Blend src_color = Blend::one, Blend dst_color = Blend::one, BlendFunc bf_color = BlendFunc::add,
@@ -162,7 +163,7 @@ namespace RA {
     using StructuredBufferPtr = std::shared_ptr<StructuredBuffer>;
     using IndexBufferPtr = std::shared_ptr<IndexBuffer>;
     using ProgramPtr = std::shared_ptr<Program>;
-    using UniformBufferPtr = std::shared_ptr<UniformBuffer>;   
+    using UniformBufferPtr = std::shared_ptr<UniformBuffer>;
 
     class Device : public std::enable_shared_from_this<Device> {
         friend class Texture2D;
@@ -473,7 +474,7 @@ namespace RA {
         ComPtr<ID3D11Buffer> m_handle;
         const Layout* m_layout;
         void* FindValueDest(const char* name, int element_idx);
-        void SetValue(void* dest, const void* data, int datasize);        
+        void SetValue(void* dest, const void* data, int datasize);
     public:
         const Layout* GetLayout() const;
         void SetState(const Layout* layout, int elemets_count, const void* data = nullptr);
@@ -485,7 +486,7 @@ namespace RA {
         void SetValue(const char* name, const glm::vec4& v, int element_idx = 0);
         void SetValue(const char* name, const glm::mat4& m, int element_idx = 0);
         void ValidateDynamicData();
-        UniformBuffer(const DevicePtr& device);        
+        UniformBuffer(const DevicePtr& device);
     };
 
     class Program : public DevChild {

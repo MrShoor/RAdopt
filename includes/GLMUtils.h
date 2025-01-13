@@ -243,6 +243,16 @@ namespace glm {
             res.max += offset;
             return res;
         }
+        inline bool Intersects(const AABB& other) const {
+            return !(
+                (max.x < other.min.x) ||
+                (max.y < other.min.y) ||
+                (max.z < other.min.z) ||
+                (other.max.x < min.z) ||
+                (other.max.y < min.y) ||
+                (other.max.z < min.z)
+                );
+        }
     };
 
     inline AABB operator * (const mat4& m, const AABB& b) {

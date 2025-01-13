@@ -111,7 +111,7 @@ namespace RA {
     {
         ValidateArmatures();
         FillBuffers(bufs);
-        for (const auto& inst : instances) {         
+        for (const auto& inst : instances) {
             RA::Texture2DPtr albedo_tex;
             auto cmd = GetDrawCommand(inst.get(), albedo_tex);
             draw_commands->commands[inst->GetGroupID()][albedo_tex].push_back(cmd);
@@ -230,7 +230,7 @@ namespace RA {
     {
         std::vector<MCMeshInstancePtr> res;
         AVMScene* scene = ObtainScene(filename);
-        if (!scene) return res;        
+        if (!scene) return res;
         if (instances.size()) {
             res.reserve(instances.size());
             for (const auto& name : instances) {

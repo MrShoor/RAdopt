@@ -339,6 +339,15 @@ namespace RA {
             m_d_state = nullptr;
         }
     }
+    void States::SetDepthBias(int Bias, float BiasClamp, float SlopeScaledBias)
+    {
+        if (m_r_desc.DepthBias != Bias || m_r_desc.DepthBiasClamp != BiasClamp || m_r_desc.SlopeScaledDepthBias != SlopeScaledBias) {
+            m_r_desc.DepthBias = Bias;
+            m_r_desc.DepthBiasClamp = BiasClamp;
+            m_r_desc.SlopeScaledDepthBias = SlopeScaledBias;
+            m_r_state = nullptr;
+        }
+    }
     void States::SetBlend(bool enable, Blend src, Blend dst, int rt_index, BlendFunc bf) 
     {
         SetBlendSeparateAlpha(enable, src, dst, bf, src, dst, bf, rt_index);

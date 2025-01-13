@@ -51,7 +51,7 @@ namespace RA {
     struct Armature;
     class MeshInstance;
     class ArmaturePose;
-    using MeshPtr = std::shared_ptr<Mesh>;    
+    using MeshPtr = std::shared_ptr<Mesh>;
     using ArmaturePtr = std::shared_ptr<Armature>;
     using MeshInstancePtr = std::shared_ptr<MeshInstance>;
     using ArmaturePosePtr = std::shared_ptr<ArmaturePose>;

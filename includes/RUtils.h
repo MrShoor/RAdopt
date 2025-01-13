@@ -93,7 +93,38 @@ namespace RA {
 
         glm::vec3 Eye() const;
         glm::vec3 At() const;
-        glm::vec3 ViewDir() const;        
+        glm::vec3 ViewDir() const;
+    };
+
+    class CameraController_YawPitch {
+    public:
+        glm::vec3 look_at = { 0, 0, 0 };
+        float yaw = 0;
+        float pitch = 0;
+        float distance = 10.0f;
+    public:
+        CameraController_YawPitch() {}
+        glm::vec3 ViewDir() const {
+            float s = glm::cos(pitch);
+            return -glm::vec3(glm::sin(yaw) * s, glm::sin(pitch), glm::cos(yaw) * s);
+        }
+        glm::vec3 Up() const {
+            return glm::vec3(0, 1, 0);
+        }
+        glm::vec3 At() const {
+            return look_at;
+        }
+        glm::vec3 Eye() const {
+            return look_at - ViewDir() * distance;
+        }
+        void Rotate(float delta_yaw, float delta_pitch) {
+            yaw += delta_yaw;
+            pitch += delta_pitch;
+            pitch = glm::clamp(pitch, -glm::pi<float>() * 0.498f, glm::pi<float>() * 0.498f);
+        }
+        void Zoom(float scale) {
+            distance *= scale;
+        }
     };
 
     class UICamera : public CameraBase {
@@ -194,6 +225,19 @@ namespace RA {
         QPC();
     };
 
+    class StepTimer {
+    private:
+        uint64_t m_last_time;
+        int m_step_interval;
+        QPC m_qpc;
+    public:
+        void Pause();
+        void Unpause();
+        int StepInterval() const;
+        void Do(const std::function<void(int step_count)>& process);
+        StepTimer(int step_interval);
+    };
+
     struct OctreeNode {
         glm::AABB box;
         std::unique_ptr<OctreeNode> childs[8];
@@ -210,10 +254,71 @@ namespace RA {
         bool Intersect(const glm::AABB& box, int tri_idx);
         void SplitRecursive(OctreeNode* node);
         void RayCastRecursive(OctreeNode* node, const glm::vec3& ray_start, const glm::vec3& ray_end, float* t, glm::vec3* normal);
+        void EnumRecursive(OctreeNode* node, const std::function<void(const OctreeNode*, bool& enum_child)>& cb) const;
     public:
+        const std::vector<glm::vec3>& Triangles() const;
+
         float RayCast(const glm::vec3& ray_start, const glm::vec3& ray_end);
         bool RayCast(const glm::vec3& ray_start, const glm::vec3& ray_end, float* t, glm::vec3* normal);
+
+        void EnumNodes(const glm::vec3& pos, float rad, const std::function<void(const OctreeNode*)>& cb) const;
+        void EnumNodes(const glm::AABB& box, const std::function<void(const OctreeNode*)>& cb) const;
+
         Octree(std::vector<glm::vec3> triangles, int max_triangles_to_split);
+    };
+
+    struct BVHNode {
+        glm::AABB bounds;
+        std::unique_ptr<BVHNode> left;
+        std::unique_ptr<BVHNode> right;
+        std::vector<uint32_t> triangleIndices;
+
+        BVHNode(std::vector<uint32_t>&& inputTriangleIndices, const std::vector<glm::vec3>& vertices, const std::vector<uint32_t>& indices, int depth = 0) {
+            if (inputTriangleIndices.size() <= 2 || depth > 20) {
+                triangleIndices = std::move(inputTriangleIndices);
+                bounds = ComputeAABB(triangleIndices, indices, vertices);
+                return;
+            }
+
+            bounds = ComputeAABB(inputTriangleIndices, indices, vertices);
+
+            std::vector<glm::vec3> centroids;
+            centroids.reserve(inputTriangleIndices.size());
+            for (uint32_t triIndex : inputTriangleIndices) {
+                centroids.push_back(ComputeCentroid(triIndex, indices, vertices));
+            }
+
+            int axis = depth % 3;
+            auto comparator = [axis, &centroids](uint32_t a, uint32_t b) {
+                return centroids[a][axis] < centroids[b][axis];
+            };
+
+            std::sort(inputTriangleIndices.begin(), inputTriangleIndices.end(), comparator);
+
+            size_t mid = inputTriangleIndices.size() / 2;
+            std::vector<uint32_t> leftIndices(inputTriangleIndices.begin(), inputTriangleIndices.begin() + mid);
+            std::vector<uint32_t> rightIndices(inputTriangleIndices.begin() + mid, inputTriangleIndices.end());
+
+            left = std::make_unique<BVHNode>(std::move(leftIndices), vertices, indices, depth + 1);
+            right = std::make_unique<BVHNode>(std::move(rightIndices), vertices, indices, depth + 1);
+        }
+
+        glm::AABB ComputeAABB(const std::vector<uint32_t>& triangleIndices, const std::vector<uint32_t>& indices, const std::vector<glm::vec3>& vertices) {
+            glm::AABB aabb;
+            for (uint32_t triIndex : triangleIndices) {
+                aabb += vertices[indices[triIndex * 3]];
+                aabb += vertices[indices[triIndex * 3 + 1]];
+                aabb += vertices[indices[triIndex * 3 + 2]];
+            }
+            return aabb;
+        }
+
+        glm::vec3 ComputeCentroid(uint32_t triIndex, const std::vector<uint32_t>& indices, const std::vector<glm::vec3>& vertices) {
+            const glm::vec3& v0 = vertices[indices[triIndex * 3]];
+            const glm::vec3& v1 = vertices[indices[triIndex * 3 + 1]];
+            const glm::vec3& v2 = vertices[indices[triIndex * 3 + 2]];
+            return (v0 + v1 + v2) / 3.0f;
+        }
     };
 
     struct File {

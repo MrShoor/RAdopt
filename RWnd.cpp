@@ -222,7 +222,7 @@ namespace RA {
         m_device->BeginFrame();
         m_device->States()->SetBlend(true, RA::Blend::one, RA::Blend::inv_src_alpha);
         RenderScene();
-        m_device->PresentToWnd();        
+        m_device->PresentToWnd();
     }
     void MessageLoop(const std::function<void()> idle_proc)
     {
@@ -337,5 +337,58 @@ namespace RA {
         m_ui_camera = std::make_unique<UICamera>(m_device);
 
         m_fbo = FBB(m_device)->Color(sRGB ? RA::TextureFmt::RGBA8_SRGB : RA::TextureFmt::RGBA8)->Finish();
+    }
+    bool FPSCursor::UpdateAbsWindowPos()
+    {
+        RECT rct;
+        GetClientRect(m_wnd.Handle(), &rct);
+        POINT rct_min{ rct.left, rct.top };
+        POINT rct_max{ rct.right, rct.bottom };
+        ClientToScreen(m_wnd.Handle(), &rct_min);
+        ClientToScreen(m_wnd.Handle(), &rct_max);
+        glm::ivec4 prev_rect = m_wnd_rect;
+        m_wnd_rect = glm::ivec4(rct_min.x, rct_min.y, rct_max.x, rct_max.y);
+        return m_wnd_rect != prev_rect;
+    }
+    void FPSCursor::CaptureMouse()
+    {
+        if (m_enabled) {
+            RECT abs_rct{ m_wnd_rect.x, m_wnd_rect.y, m_wnd_rect.z, m_wnd_rect.w };
+            ClipCursor(&abs_rct);
+            SetCursorToCenter();
+        }
+        else {
+            ClipCursor(nullptr);
+        }
+    }
+    void FPSCursor::SetCursorToCenter()
+    {
+        SetCursorPos((m_wnd_rect.x + m_wnd_rect.z) / 2, (m_wnd_rect.y + m_wnd_rect.w) / 2);
+    }
+    bool FPSCursor::Enabled() const
+    {
+        return m_enabled;
+    }
+    void FPSCursor::SetEnabled(bool enabled)
+    {
+        if (m_enabled == enabled) return;
+        m_enabled = enabled;
+        UpdateAbsWindowPos();
+        CaptureMouse();
+    }
+    glm::ivec2 FPSCursor::ExtractMouseDelta()
+    {
+        if (!m_enabled) return { 0, 0 };
+        POINT cur_pt;
+        glm::ivec2 last_pt{ (m_wnd_rect.x + m_wnd_rect.z) / 2, (m_wnd_rect.y + m_wnd_rect.w) / 2 };
+        GetCursorPos(&cur_pt);
+        glm::ivec2 delta = glm::ivec2(cur_pt.x, cur_pt.y) - last_pt;
+        if (UpdateAbsWindowPos())
+            CaptureMouse();
+        SetCursorToCenter();
+        return delta;
+    }
+    FPSCursor::FPSCursor(const Window& wnd) : m_wnd(wnd)
+    {
     }
 }

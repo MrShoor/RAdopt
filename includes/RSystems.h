@@ -175,7 +175,7 @@ namespace RA {
 
         MCMeshInstancePtr Clone_MeshInstance(AVMScene* scene, const std::string& instance_name);
         void ValidateArmatures();
-        void FillBuffers(MeshCollectionBuffers* bufs);        
+        void FillBuffers(MeshCollectionBuffers* bufs);
         RA::Texture2DPtr ObtainTexture(const std::filesystem::path& path, bool srgb);
         DrawIndexedCmd GetDrawCommand(MCMeshInstance* inst);
     public:
@@ -200,7 +200,7 @@ namespace RA {
 
     struct DecalData {
         glm::vec4 color;
-        glm::quat rotate;        
+        glm::quat rotate;
         glm::vec3 size;
         float dummy;
         glm::vec3 pos;

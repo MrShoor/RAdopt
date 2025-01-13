@@ -76,6 +76,21 @@ namespace RA {
         UIRenderWindow(std::wstring caption, bool isMainWindow, bool sRGB);
     };
 
+    class FPSCursor {
+    private:
+        const Window& m_wnd;
+        bool m_enabled = false;
+        glm::ivec4 m_wnd_rect{};
+        bool UpdateAbsWindowPos();
+        void CaptureMouse();
+        void SetCursorToCenter();
+    public:
+        bool Enabled() const;
+        void SetEnabled(bool enabled);
+        glm::ivec2 ExtractMouseDelta();
+        FPSCursor(const Window& wnd);
+    };
+
     void MessageLoop(const std::function<void()> idle_proc);
     void MessageLoop();
 }

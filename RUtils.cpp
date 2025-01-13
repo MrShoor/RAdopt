@@ -497,8 +497,23 @@ namespace RA {
             }
         }
     }
+    void Octree::EnumRecursive(OctreeNode* node, const std::function<void(const OctreeNode*, bool& enum_child)>& cb) const
+    {
+        if (!node) return;
+        bool enum_child = true;
+        cb(node, enum_child);
+        if (enum_child)
+            for (int i = 0; i < 8; i++)
+                EnumRecursive(node->childs[i].get(), cb);
+    }
+    const std::vector<glm::vec3>& Octree::Triangles() const
+    {
+        return m_triangles;
+    }
     float Octree::RayCast(const glm::vec3& ray_start, const glm::vec3& ray_end)
     {
+        glm::mat4 m1, m2;
+        glm::mat4 m3 = m2 * m1;
         float t = 1.0f;
         glm::vec3 tmpn;
         RayCastRecursive(m_root.get(), ray_start, ray_end, &t, &tmpn);
@@ -511,6 +526,21 @@ namespace RA {
         if (tmpt == 1.0f) return false;
         *t = tmpt;
         return true;
+    }
+    void Octree::EnumNodes(const glm::vec3& pos, float rad, const std::function<void(const OctreeNode*)>& cb) const
+    {
+        glm::AABB box;
+        box += pos;
+        box = box.Expand(rad);
+        EnumNodes(box, cb);
+    }
+    void Octree::EnumNodes(const glm::AABB& box, const std::function<void(const OctreeNode*)>& cb) const
+    {
+        EnumRecursive(m_root.get(), [&](const OctreeNode* node, bool& enum_child) {
+            enum_child = node->box.Intersects(box);
+            if (enum_child)
+                cb(node);
+            });
     }
     Octree::Octree(std::vector<glm::vec3> triangles, int max_triangles_to_split)
     {
@@ -658,7 +688,7 @@ namespace RA {
     }
     void UICamera::UpdateFromWnd()
     {
-        RECT rct;        
+        RECT rct;
         GetClientRect(m_ubo->GetDevice()->Window(), &rct);
         m_buf.view = glm::mat4(1.0);
         glm::mat4 ms = glm::scale(glm::vec3(2.0f / rct.right, -2.0f / rct.bottom, 1.0f));
@@ -667,5 +697,31 @@ namespace RA {
         m_buf.UpdateViewProj();
 
         m_ubo->SetSubData(0, 1, &m_buf);
+    }
+    void StepTimer::Pause()
+    {
+        m_qpc.Pause();
+    }
+    void StepTimer::Unpause()
+    {
+        m_qpc.Unpause();
+    }
+    int StepTimer::StepInterval() const
+    {
+        return m_step_interval;
+    }
+    void StepTimer::Do(const std::function<void(int step_count)>& process)
+    {
+        uint64_t curr_time = m_qpc.Time();
+        int step_count = int((curr_time - m_last_time) / m_step_interval);
+        if (step_count)
+        {
+            process(step_count);
+            m_last_time += step_count * m_step_interval;
+        }
+    }
+    StepTimer::StepTimer(int step_interval) : m_step_interval(step_interval)
+    {
+        m_last_time = m_qpc.Time();
     }
 }
