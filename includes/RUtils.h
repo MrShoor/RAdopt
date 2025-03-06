@@ -220,6 +220,7 @@ namespace RA {
         uint64_t TimeMcS() const;
 
         uint64_t Time() const;
+        bool Paused() const;
         void Pause();
         void Unpause();
         QPC();

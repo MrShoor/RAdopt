@@ -14,19 +14,6 @@ namespace glm {
             b2.Aprrox(tolerance, add_point);
         }
     }
-    glm::Plane AABB::Plane(int idx) const
-    {
-        switch (idx) {
-            case 0: return glm::Plane(Point(0), Point(4), Point(2)); //near plane
-            case 1: return glm::Plane(Point(7), Point(5), Point(3)); //far plane
-            case 2: return glm::Plane(Point(2), Point(6), Point(3)); //top plane
-            case 3: return glm::Plane(Point(0), Point(1), Point(4)); //bottom plane
-            case 4: return glm::Plane(Point(2), Point(3), Point(0)); //left plane
-            case 5: return glm::Plane(Point(7), Point(6), Point(5)); //right plane
-        default:
-            return glm::Plane();
-        }
-    }
     bool Intersect(const glm::AABB& box, const glm::vec3& pt1, const glm::vec3& pt2, const glm::vec3& pt3)
     {
         Plane p(pt1, pt2, pt3);
@@ -90,44 +77,6 @@ namespace glm {
             if (t_min.x > t_max.x) return false;
         }
         return (t_min.x <= 1.0);
-    }
-    bool Intersect(const vec3& pt1, const vec3& pt2, const vec3& pt3, const vec3& seg_start, const vec3& seg_end, float* t)
-    {
-        glm::vec3 ray_dir = seg_end - seg_start;
-        glm::vec3 a, b, p, q, n;
-        float inv_det, det;
-        a = pt1 - pt2;
-        b = pt3 - pt1;
-        n = cross(b, a);
-        p = pt1 - seg_start;
-        q = cross(p, ray_dir);
-
-        det = dot(ray_dir, n);
-        if (!det) return false;
-        inv_det = 1.0f / det;
-
-        glm::vec3 uvw;
-        uvw.x = dot(q, b) * inv_det;
-        uvw.y = dot(q, a) * inv_det;
-
-        if ((uvw.x < 0) || (uvw.x > 1) || (uvw.y < 0) || (uvw.x + uvw.y > 1)) return false;
-        uvw.z = 1.0f - uvw.x - uvw.y;
-
-        float tmpt = dot(n, p) * inv_det;
-        if (tmpt < 0) return false;
-        if (tmpt > 1) return false;
-
-        *t = tmpt;
-        return true;
-    }
-    bool Intersect(const glm::Plane& plane, const glm::Ray& ray, float* t)
-    {
-        float da = -glm::dot(plane.v.xyz(), ray.origin);
-        float db = -glm::dot(plane.v.xyz(), ray.origin + ray.dir);
-        if (da == db) return false;
-        if (t)
-            *t = (plane.v.w - da) / (db - da);
-        return true;
     }
     bool Intersect(const glm::Plane& plane, const glm::Ray& ray, glm::vec3& pt)
     {

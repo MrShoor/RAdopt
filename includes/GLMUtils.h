@@ -3,13 +3,12 @@
 #include <limits>
 #include <functional>
 #include <vector>
+#include <iostream>
 
 static constexpr float cPI = 3.1415926535897932384626433832795f;
 static constexpr float cPI2 = 6.283185307179586476925286766559f;
 
 namespace glm {
-    struct Plane;
-
     struct AABR {
         vec2 min;
         vec2 max;
@@ -92,7 +91,7 @@ namespace glm {
         inline bool IsIntersects(const glm::AABR& box) const {
             return
                 max.x > box.min.x &&
-                min.x < box.max.x &&
+                min.x < box.max.x&&
                 max.y > box.min.y &&
                 min.y < box.max.y;
         }
@@ -114,13 +113,53 @@ namespace glm {
         return res;
     }
 
-    struct AABB {
-        vec3 min;
-        vec3 max;
-        AABB() noexcept {
+    template <typename T, qualifier Q = defaultp>
+    struct Plane_T {
+        vec<4, T, Q> v;
+        inline Plane_T() {
+            v = vec<4, T, Q>(0);
+        }
+        inline Plane_T(const vec<4, T, Q>& v) {
+            this->v = v;
+        }
+        inline Plane_T(const vec<3, T, Q>& n, const vec<3, T, Q>& pt) {
+            v = vec<4, T, Q>(n.x, n.y, n.z, -dot(n, pt));
+        }
+        inline Plane_T(const vec<3, T, Q>& pt1, const vec<3, T, Q>& pt2, const vec<3, T, Q>& pt3) {
+            *this = Plane_T(cross(pt2 - pt1, pt3 - pt1), pt1);
+        }
+        inline T Distance(const vec<3, T, Q>& pt) const {
+            return (dot(pt, v.xyz()) + v.w) / length(v.xyz());
+        }
+        Plane_T Normalize() {
+            Plane_T res = *this;
+            T len = glm::length(res.v.xyz());
+            res.v /= len;
+            return res;
+        }
+    };
+
+    template <typename T, qualifier Q = defaultp>
+    inline Plane_T<T, Q> operator * (const qua<T, Q>& q, const Plane_T<T, Q>& p) {
+        vec<3, T, Q> n = q * p.v.xyz();
+        Plane_T<T, Q> res;
+        res.v.x = n.x;
+        res.v.y = n.y;
+        res.v.z = n.z;
+        res.v.w = p.v.w;
+        return res;
+    }
+    using Plane = Plane_T<float, defaultp>;
+    using dPlane = Plane_T<double, defaultp>;
+
+    template <typename T, qualifier Q = defaultp>
+    struct AABB_T {
+        vec<3, T, Q> min;
+        vec<3, T, Q> max;
+        AABB_T() noexcept {
             SetEmpty();
         }
-        glm::vec3 Point(int idx) const {
+        vec<3, T, Q> Point(int idx) const {
             idx %= 8;
             if (idx < 0) idx += 8;
             switch (idx) {
@@ -135,11 +174,23 @@ namespace glm {
             default: return { 0,0,0 };
             }
         }
-        glm::Plane Plane(int idx) const;
+        Plane_T<T, Q> Plane(int idx) const
+        {
+            switch (idx) {
+            case 0: return Plane_T<T, Q>(Point(0), Point(4), Point(2)); //near plane
+            case 1: return Plane_T<T, Q>(Point(7), Point(5), Point(3)); //far plane
+            case 2: return Plane_T<T, Q>(Point(2), Point(6), Point(3)); //top plane
+            case 3: return Plane_T<T, Q>(Point(0), Point(1), Point(4)); //bottom plane
+            case 4: return Plane_T<T, Q>(Point(2), Point(3), Point(0)); //left plane
+            case 5: return Plane_T<T, Q>(Point(7), Point(6), Point(5)); //right plane
+            default:
+                return Plane_T<T, Q>();
+            }
+        }
         inline bool IsEmpty() const {
             return (min.x >= max.x) || (min.y >= max.y) || (min.z >= max.z);
         }
-        inline void GetEdge(int idx, glm::vec3& pt1, glm::vec3& pt2) const {
+        inline void GetEdge(int idx, vec<3, T, Q>& pt1, vec<3, T, Q>& pt2) const {
             idx %= 12;
             if (idx < 0) idx += 12;
             switch (idx) {
@@ -196,54 +247,54 @@ namespace glm {
             }
         }
         inline void SetEmpty() {
-            min.x = std::numeric_limits<float>::max();
-            min.y = std::numeric_limits<float>::max();
-            min.z = std::numeric_limits<float>::max();
-            max.x = std::numeric_limits<float>::lowest();
-            max.y = std::numeric_limits<float>::lowest();
-            max.z = std::numeric_limits<float>::lowest();
+            min.x = std::numeric_limits<T>::max();
+            min.y = std::numeric_limits<T>::max();
+            min.z = std::numeric_limits<T>::max();
+            max.x = std::numeric_limits<T>::lowest();
+            max.y = std::numeric_limits<T>::lowest();
+            max.z = std::numeric_limits<T>::lowest();
         }
-        inline glm::vec3 Center() const {
-            return (min + max) * 0.5f;
+        inline vec<3, T, Q> Center() const {
+            return (min + max) * T(0.5);
         }
-        inline glm::vec3 Size() const {
+        inline vec<3, T, Q> Size() const {
             return (max - min);
         }
-        inline AABB& operator += (const vec3& v) {
+        inline AABB_T& operator += (const vec<3, T, Q>& v) {
             min = glm::min(min, v);
             max = glm::max(max, v);
             return *this;
         }
-        inline AABB& operator += (const AABB& b) {
+        inline AABB_T& operator += (const AABB_T& b) {
             min = glm::min(min, b.min);
             max = glm::max(max, b.max);
             return *this;
         }
-        inline AABB operator + (const AABB& b) const {
-            AABB res;
+        inline AABB_T operator + (const AABB_T& b) const {
+            AABB_T res;
             res.min = glm::min(min, b.min);
             res.max = glm::max(max, b.max);
             return res;
         }
-        inline AABB Expand(float expansion) const {
-            AABB res = *this;
-            res.min -= glm::vec3(expansion, expansion, expansion);
-            res.max += glm::vec3(expansion, expansion, expansion);
+        inline AABB_T Expand(T expansion) const {
+            AABB_T res = *this;
+            res.min -= vec<3, T, Q>(expansion, expansion, expansion);
+            res.max += vec<3, T, Q>(expansion, expansion, expansion);
             return res;
         }
-        inline AABB Expand(glm::vec3 expansion) const {
-            AABB res = *this;
+        inline AABB_T Expand(const vec<3, T, Q>& expansion) const {
+            AABB_T res = *this;
             res.min -= expansion;
             res.max += expansion;
             return res;
         }
-        inline AABB Offset(const glm::vec3& offset) const {
-            AABB res = *this;
+        inline AABB_T Offset(const vec<3, T, Q>& offset) const {
+            AABB_T res = *this;
             res.min += offset;
             res.max += offset;
             return res;
         }
-        inline bool Intersects(const AABB& other) const {
+        inline bool Intersects(const AABB_T& other) const {
             return !(
                 (max.x < other.min.x) ||
                 (max.y < other.min.y) ||
@@ -255,62 +306,182 @@ namespace glm {
         }
     };
 
-    inline AABB operator * (const mat4& m, const AABB& b) {
-        AABB res;
+    template <typename T, qualifier Q = defaultp>
+    inline AABB_T<T, Q> operator * (const mat<4, 4, T, Q>& m, const AABB_T<T, Q>& b) {
+        AABB_T<T, Q> res;
         for (int i = 0; i < 8; i++) {
-            glm::vec4 tmp = (m * glm::vec4(b.Point(i), 1.0f));
-            glm::vec3 tmp3 = tmp.xyz() / tmp.w;
+            vec<4, T, Q> tmp = (m * vec<4, T, Q>(b.Point(i), T(1.0)));
+            vec<3, T, Q> tmp3 = tmp.xyz() / tmp.w;
             res += tmp3;
         }
         return res;
     }
+    template <typename T, qualifier Q = defaultp>
+    inline std::string to_string(const AABB_T<T, Q>& b) {
+        return "AABB(" + glm::to_string(b.min) + ", " + glm::to_string(b.max) + ")";
+    }
 
-    struct Plane {
-        vec4 v;
-        inline Plane() {
-            v = glm::vec4(0);
-        }
-        inline Plane(const vec4& v) {
-            this->v = v;
-        }
-        inline Plane(const vec3& n, const vec3& pt) {
-            v = vec4(n.x, n.y, n.z, -dot(n, pt));
-        }
-        inline Plane(const vec3& pt1, const vec3& pt2, const vec3& pt3) {
-            *this = Plane(cross(pt2 - pt1, pt3 - pt1), pt1);
-        }
-        inline float Distance(const vec3& pt) const {
-            return (dot(pt, v.xyz()) + v.w) / length(v.xyz());
-        }
-    };
+    using AABB = AABB_T<float>;
+    using dAABB = AABB_T<double>;
 
-    struct Ray {
-        vec3 origin = { 0, 0, 0 };
-        vec3 dir = { 1, 0, 0 };        
+    template <typename T, qualifier Q = defaultp>
+    struct Ray_T {
+        vec<3, T, Q> origin;// = vec<3, T, Q>(0, 0, 0);
+        vec<3, T, Q> dir;// = vec<3, T, Q>(1, 0, 0);
     };
-    inline Ray operator * (const mat4& m, const Ray& r) {
-        Ray res;
-        glm::vec4 tmp1 = (m * glm::vec4(r.origin, 1.0f));
-        glm::vec4 tmp2 = (m * glm::vec4(r.origin + r.dir, 1.0f));
+    template <typename T, qualifier Q = defaultp>
+    inline Ray_T<T, Q> operator * (const mat<4, 4, T, Q>& m, const Ray_T<T, Q>& r) {
+        Ray_T<T, Q> res;
+        vec<4, T, Q> tmp1 = (m * vec<4, T, Q>(r.origin, 1.0f));
+        vec<4, T, Q> tmp2 = (m * vec<4, T, Q>(r.origin + r.dir, 1.0f));
         res.origin = tmp1.xyz() / tmp1.w;
         res.dir = tmp2.xyz() / tmp2.w - res.origin;
         return res;
     }
+    template <typename T, qualifier Q = defaultp>
+    inline Ray_T<T, Q> operator * (const qua<T, Q>& q, const Ray_T<T, Q>& r) {
+        Ray_T<T, Q> res;
+        res.dir = q * r.dir;
+        res.origin = q * r.origin;
+        return res;
+    }
+    using Ray = Ray_T<float>;
+    using dRay = Ray_T<double>;
 
-    inline bool Intersect(const Plane& p1, const Plane& p2, const Plane& p3, vec3* intpt) {
-        mat3 m = { p1.v.xyz(), p2.v.xyz(), p3.v.xyz() };
-        vec3 b = { -p1.v.w, -p2.v.w, -p3.v.w };
+    template <typename T, qualifier Q = defaultp>
+    vec<3, T, Q> AnyPerp(const vec<3, T, Q>& n) {
+        int i = 0;
+        for (int j = 1; j < 3; j++)
+            if (glm::abs(n[j]) < glm::abs(n[i]))
+                i = j;
+        vec<3, T, Q> tmp_tan{ 0,0,0 };
+        tmp_tan[i] = 1.0;
+        return glm::cross(n, tmp_tan);
+    }
+
+    template <typename T, qualifier Q = defaultp>
+    inline T ProjectionT(const vec<3, T, Q>& dest, const vec<3, T, Q>& source) {
+        T dp = dot(source, dest);
+        return dp / glm::length2(dest);
+    }
+
+    template <typename T, qualifier Q = defaultp>
+    inline T ProjectionT(const Ray_T<T, Q>& ray, const vec<3, T, Q>& pt) {
+        vec<3, T, Q> pt_dir = pt - ray.origin;
+        return ProjectionT(ray.dir, pt_dir);
+    }
+
+    template <typename T, qualifier Q = defaultp>
+    inline vec<3, T, Q> Projection(const Ray_T<T, Q>& ray, const vec<3, T, Q>& pt) {
+        return ray.origin + ray.dir * ProjectionT(ray, pt);
+    }
+
+    template <typename T, qualifier Q = defaultp>
+    inline vec<3, T, Q> Projection(const Plane_T<T, Q>& plane, const vec<3, T, Q>& pt) {
+        T dist = (dot(plane.v.xyz(), pt) + plane.v.w) / dot(plane.v.xyz(), plane.v.xyz());
+        return pt - plane.v.xyz() * dist;
+    }
+
+    template <typename T, qualifier Q = defaultp>
+    inline bool Intersect(const Plane_T<T, Q>& p1, const Plane_T<T, Q>& p2, const Plane_T<T, Q>& p3, vec<3, T, Q>* intpt) {
+        mat<3, 3, T, Q> m = { p1.v.xyz(), p2.v.xyz(), p3.v.xyz() };
+        vec<3, T, Q> b = { -p1.v.w, -p2.v.w, -p3.v.w };
         if (determinant(m) == 0) return false;
-        mat3 m_inv = inverse(m);
+        mat<3, 3, T, Q> m_inv = inverse(m);
         *intpt = b * m_inv;
+        return true;
+    }
+
+    template <typename T, qualifier Q = defaultp>
+    bool Intersect(const glm::AABB_T<T, Q>& box, const Ray_T<T, Q>& ray, vec<2, T, Q>& t)
+    {
+        vec<3, T, Q> rad = box.Size() * T(0.5);
+
+        vec<3, T, Q> m = 1.0 / ray.dir;
+        vec<3, T, Q> n = m * (ray.origin - box.Center());
+        vec<3, T, Q> k = abs(m) * rad;
+        vec<3, T, Q> t1 = -n - k;
+        vec<3, T, Q> t2 = -n + k;
+
+        t.x = max(max(t1.x, t1.y), t1.z);
+        t.y = min(min(t2.x, t2.y), t2.z);
+
+        return !(t.x > t.y || t.y < 0.0);
+    }
+
+    // segment/triangle intersection
+    template <typename T, qualifier Q = defaultp>
+    bool Intersect(const vec<3, T, Q>& pt1, const vec<3, T, Q>& pt2, const vec<3, T, Q>& pt3, const vec<3, T, Q>& seg_start, const vec<3, T, Q>& seg_end, T* t)
+    {
+        vec<3, T, Q> ray_dir = seg_end - seg_start;
+        vec<3, T, Q> a, b, p, q, n;
+        T inv_det, det;
+        a = pt1 - pt2;
+        b = pt3 - pt1;
+        n = cross(b, a);
+        p = pt1 - seg_start;
+        q = cross(p, ray_dir);
+
+        det = dot(ray_dir, n);
+        if (!det) return false;
+        inv_det = T(1.0) / det;
+
+        vec<3, T, Q> uvw;
+        uvw.x = dot(q, b) * inv_det;
+        uvw.y = dot(q, a) * inv_det;
+
+        if ((uvw.x < 0) || (uvw.x > 1) || (uvw.y < 0) || (uvw.x + uvw.y > 1)) return false;
+        uvw.z = T(1.0) - uvw.x - uvw.y;
+
+        T tmpt = dot(n, p) * inv_det;
+        if (tmpt < 0) return false;
+        if (tmpt > 1) return false;
+
+        *t = tmpt;
+        return true;
+    }
+
+    // plane/ray intersection
+    template <typename T, qualifier Q = defaultp>
+    bool Intersect(const Plane_T<T, Q>& plane, const Ray_T<T, Q>& ray, T* t = nullptr)
+    {
+        T da = -glm::dot(plane.v.xyz(), ray.origin);
+        T db = -glm::dot(plane.v.xyz(), ray.origin + ray.dir);
+        if (da == db) return false;
+        if (t)
+            *t = (plane.v.w - da) / (db - da);
         return true;
     }
 
     bool Intersect(const glm::AABB& box, const glm::vec3& pt1, const glm::vec3& pt2, const glm::vec3& pt3);
     bool Intersect(const glm::AABB& box, const glm::vec3& seg_start, const glm::vec3& seg_end, bool solid_aabb);
-    bool Intersect(const vec3& pt1, const vec3& pt2, const vec3& pt3, const vec3& seg_start, const vec3& seg_end, float* t);
-    bool Intersect(const glm::Plane& plane, const glm::Ray& ray, float* t = nullptr);
     bool Intersect(const glm::Plane& plane, const glm::Ray& ray, glm::vec3& pt);
+
+    template <typename T, qualifier Q = defaultp>
+    vec<2, T, Q> SkewLinesSegment(const Ray_T<T, Q>& r1, const Ray_T<T, Q>& r2) {
+        vec<2, T, Q> res{ 0,0 };
+        vec<3, T, Q> n = glm::cross(r1.dir, r2.dir);
+        if (length2(n) == 0) {
+            if (dot(r1.dir, r2.origin - r1.origin) < 0) {
+                res.x = 0;
+                res.y = ProjectionT(r2, r1.origin);
+            }
+            else {
+                res.y = 0;
+                res.x = ProjectionT(r1, r2.origin);
+            }
+            return res;
+        }
+
+        glm::Plane_T<T, Q> p1 = Plane_T(glm::cross(n, r1.dir), r1.origin);
+        bool b1 = Intersect(p1, r2, &res.y);
+        assert(b1);
+        glm::Plane_T<T, Q> p2 = Plane_T(glm::cross(n, r2.dir), r2.origin);
+        bool b2 = Intersect(p2, r1, &res.x);
+        assert(b2);
+
+        return res;
+    }
 
     struct Bezier2_2d {
         vec2 pt[3];

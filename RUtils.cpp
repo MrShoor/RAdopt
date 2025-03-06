@@ -416,6 +416,10 @@ namespace RA {
             return (tmp - m_start) * 1000 / m_freq;
         }
     }
+    bool QPC::Paused() const
+    {
+        return m_paused;
+    }
     void QPC::Pause()
     {
         if (m_paused) return;
